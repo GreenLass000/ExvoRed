@@ -1,0 +1,5 @@
+{
+  "name": "Exvotos Database Manager",
+  "description": "An Excel-style web application to manage a database of 'exvotos' (votive offerings), including related sanctuaries, catalogs, and other historical data. It allows for creating, reading, updating, and deleting records in a spreadsheet-like interface.",
+  "requestFramePermissions": []
+}
