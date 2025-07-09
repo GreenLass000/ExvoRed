@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DataTable, ColumnDef } from '../components/DataTable';
 import { PlusIcon } from '../components/icons';
 import Modal from '../components/Modal';
@@ -21,11 +22,8 @@ const getInitialSemData = (): Omit<Sem, 'id' | 'pictorial_exvoto_count' | 'oldes
 
 const columns: ColumnDef<Sem>[] = [
     { key: 'name', header: 'Nombre' },
-    { key: 'region', header: 'Región' },
     { key: 'province', header: 'Provincia' },
-    { key: 'town', header: 'Población' },
     { key: 'associated_divinity', header: 'Divinidad Asociada' },
-    { key: 'festivity', header: 'Festividad' },
     { key: 'pictorial_exvoto_count', header: 'Nº Exvotos', type: 'number' },
     { key: 'oldest_exvoto_date', header: 'Fecha más antigua', type: 'date' },
     { key: 'newest_exvoto_date', header: 'Fecha más reciente', type: 'date' },
@@ -36,7 +34,9 @@ const SemPage: React.FC = () => {
     const [sems, setSems] = useState<Sem[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingSem, setEditingSem] = useState<Sem | null>(null);
     const [newSemData, setNewSemData] = useState<Omit<Sem, 'id' | 'pictorial_exvoto_count' | 'oldest_exvoto_date' | 'newest_exvoto_date'>>(getInitialSemData());
+    const navigate = useNavigate();
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -55,12 +55,34 @@ const SemPage: React.FC = () => {
     }, [fetchData]);
 
     const handleOpenModal = () => {
+        setEditingSem(null);
         setNewSemData(getInitialSemData());
         setIsModalOpen(true);
     };
 
+    const handleEditSem = (id: number) => {
+        const sem = sems.find(s => s.id === id);
+        if (sem) {
+            setEditingSem(sem);
+            setNewSemData({
+                name: sem.name,
+                region: sem.region,
+                province: sem.province,
+                town: sem.town,
+                associated_divinity: sem.associated_divinity,
+                festivity: sem.festivity,
+                other_exvotos: sem.other_exvotos,
+                comments: sem.comments,
+                references: sem.references,
+                contact: sem.contact
+            });
+            setIsModalOpen(true);
+        }
+    };
+
     const handleModalClose = () => {
         setIsModalOpen(false);
+        setEditingSem(null);
     };
 
     const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -74,7 +96,11 @@ const SemPage: React.FC = () => {
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        await api.createSem(newSemData);
+        if (editingSem) {
+            await api.updateSem(editingSem.id, newSemData);
+        } else {
+            await api.createSem(newSemData);
+        }
         handleModalClose();
         await fetchData();
     };
@@ -89,6 +115,10 @@ const SemPage: React.FC = () => {
     const handleDelete = async (id: number) => {
         await api.deleteSem(id);
         setSems(prev => prev.filter(s => s.id !== id));
+    };
+
+    const handleViewDetail = (id: number) => {
+        navigate(`/sem/${id}`);
     };
 
     if (loading) {
@@ -138,7 +168,7 @@ const SemPage: React.FC = () => {
                 </button>
             </div>
 
-            <Modal isOpen={isModalOpen} onClose={handleModalClose} title="Añadir Nuevo SEM">
+            <Modal isOpen={isModalOpen} onClose={handleModalClose} title={editingSem ? "Editar SEM" : "Añadir Nuevo SEM"}>
                 <form onSubmit={handleFormSubmit}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {renderFormField('Nombre', 'name')}
@@ -167,7 +197,7 @@ const SemPage: React.FC = () => {
                     </div>
                     <div className="flex justify-end pt-8 sticky bottom-0 bg-white py-4 -mx-6 px-6 border-t">
                         <button type="button" onClick={handleModalClose} className="mr-3 px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300">Cancelar</button>
-                        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">Guardar SEM</button>
+                        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">{editingSem ? "Actualizar SEM" : "Guardar SEM"}</button>
                     </div>
                 </form>
             </Modal>
@@ -177,6 +207,8 @@ const SemPage: React.FC = () => {
                 columns={columns}
                 onRowUpdate={handleUpdate}
                 onRowDelete={handleDelete}
+                onRowView={handleViewDetail}
+                onRowEdit={handleEditSem}
             />
         </div>
     );

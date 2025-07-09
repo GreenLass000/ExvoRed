@@ -1,14 +1,15 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { TrashIcon, EyeIcon } from './icons';
+import { TrashIcon, EyeIcon, EditIcon } from './icons';
 import type { Sem } from '../types';
 
 export type ColumnDef<T> = {
     key: keyof T | 'actions';
     header: string;
-    type?: 'text' | 'date' | 'number' | 'foreignKey';
+    type?: 'text' | 'date' | 'number' | 'foreignKey' | 'clickable';
     foreignKeyData?: Sem[];
     getDisplayValue?: (row: T) => React.ReactNode;
+    onCellClick?: (row: T) => void;
 };
 
 interface DataTableProps<T extends { id: number }> {
@@ -17,9 +18,10 @@ interface DataTableProps<T extends { id: number }> {
     onRowUpdate: (id: number, data: Partial<T>) => Promise<any>;
     onRowDelete: (id: number) => Promise<any>;
     onRowView?: (id: number) => void;
+    onRowEdit?: (id: number) => void;
 }
 
-export function DataTable<T extends { id: number }>({ data, columns, onRowUpdate, onRowDelete, onRowView }: DataTableProps<T>) {
+export function DataTable<T extends { id: number }>({ data, columns, onRowUpdate, onRowDelete, onRowView, onRowEdit }: DataTableProps<T>) {
     const [editingCell, setEditingCell] = useState<{ rowId: number; columnKey: string } | null>(null);
     const [editValue, setEditValue] = useState<any>('');
     const [status, setStatus] = useState<{ rowId: number, message: string, type: 'info' | 'error' } | null>(null);
@@ -120,7 +122,38 @@ export function DataTable<T extends { id: number }>({ data, columns, onRowUpdate
 
         if (column.getDisplayValue) {
             const displayValue = column.getDisplayValue(row);
-            return displayValue ?? <span className="text-slate-400">N/A</span>;
+            
+            if (displayValue === null || displayValue === undefined) {
+                return <span className="text-slate-400">N/A</span>;
+            }
+            
+            // Si es un elemento React, lo renderizamos directamente
+            if (React.isValidElement(displayValue)) {
+                return displayValue;
+            }
+            
+            // Si es clickable, lo envolvemos en un botón
+            if (column.type === 'clickable' && column.onCellClick) {
+                const isInvalid = displayValue && typeof displayValue === 'string' && displayValue.includes('ID inválido');
+                
+                if (isInvalid) {
+                    return <span className="text-red-500 text-xs">{displayValue}</span>;
+                }
+                
+                return (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            column.onCellClick!(row);
+                        }}
+                        className="text-slate-900 hover:text-blue-600 hover:bg-blue-50 cursor-pointer px-2 py-1 rounded transition-colors"
+                    >
+                        {displayValue}
+                    </button>
+                );
+            }
+            
+            return displayValue;
         }
 
         const cellValue = row[columnKey as keyof T];
@@ -133,7 +166,29 @@ export function DataTable<T extends { id: number }>({ data, columns, onRowUpdate
             return cellValue.toLocaleDateString();
         }
 
-        return cellValue.toString();
+        const displayValue = cellValue.toString();
+        
+        if (column.type === 'clickable' && column.onCellClick) {
+            const isInvalid = displayValue && typeof displayValue === 'string' && displayValue.includes('ID inválido');
+            
+            if (isInvalid) {
+                return <span className="text-red-500 text-xs">{displayValue}</span>;
+            }
+            
+            return (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        column.onCellClick!(row);
+                    }}
+                    className="text-slate-900 hover:text-blue-600 hover:bg-blue-50 cursor-pointer px-2 py-1 rounded transition-colors"
+                >
+                    {displayValue}
+                </button>
+            );
+        }
+
+        return displayValue;
     };
 
     return (
@@ -155,7 +210,7 @@ export function DataTable<T extends { id: number }>({ data, columns, onRowUpdate
                                 <td 
                                     key={`${row.id}-${col.key as string}`}
                                     className="px-4 py-1 h-12 whitespace-nowrap relative"
-                                    onDoubleClick={() => col.key !== 'actions' && handleCellDoubleClick(row, col.key as string)}
+                                    onDoubleClick={() => col.key !== 'actions' && col.type !== 'clickable' && handleCellDoubleClick(row, col.key as string)}
                                 >
                                     {col.key === 'actions' ? (
                                         <div className="flex items-center space-x-2">
@@ -163,13 +218,26 @@ export function DataTable<T extends { id: number }>({ data, columns, onRowUpdate
                                                  <button 
                                                     onClick={() => onRowView(row.id)}
                                                     className="p-1 text-slate-400 hover:text-blue-600 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    title="View details"
+                                                    title="Ver detalles"
                                                 >
                                                     <EyeIcon />
                                                 </button>
                                             )}
+                                            {onRowEdit && (
+                                                 <button 
+                                                    onClick={() => onRowEdit(row.id)}
+                                                    className="p-1 text-slate-400 hover:text-green-600 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    title="Editar"
+                                                >
+                                                    <EditIcon />
+                                                </button>
+                                            )}
                                             <button 
-                                                onClick={() => onRowDelete(row.id)}
+                                                onClick={() => {
+                                                    if (confirm('¿Estás seguro de que deseas eliminar este elemento?')) {
+                                                        onRowDelete(row.id);
+                                                    }
+                                                }}
                                                 className="p-1 text-slate-400 hover:text-red-600 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
                                                 title="Delete row"
                                             >

@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { DataTable, ColumnDef } from '../components/DataTable';
 import { PlusIcon } from '../components/icons';
 import Modal from '../components/Modal';
-import { Exvoto, Sem } from '../types';
+import TagSelect from '../components/TagSelect';
+import { Exvoto, Sem, Character, Miracle } from '../types';
 import * as api from '../services/mockApi';
 
 const getInitialExvotoData = (): Omit<Exvoto, 'id'> => ({
@@ -38,8 +39,11 @@ const getInitialExvotoData = (): Omit<Exvoto, 'id'> => ({
 const ExvotoPage: React.FC = () => {
     const [exvotos, setExvotos] = useState<Exvoto[]>([]);
     const [sems, setSems] = useState<Sem[]>([]);
+    const [characters, setCharacters] = useState<Character[]>([]);
+    const [miracles, setMiracles] = useState<Miracle[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingExvoto, setEditingExvoto] = useState<Exvoto | null>(null);
     const [newExvotoData, setNewExvotoData] = useState<Omit<Exvoto, 'id'>>(getInitialExvotoData());
     const navigate = useNavigate();
 
@@ -47,9 +51,16 @@ const ExvotoPage: React.FC = () => {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [exvotoData, semData] = await Promise.all([api.getExvotos(), api.getSems()]);
+            const [exvotoData, semData, characterData, miracleData] = await Promise.all([
+                api.getExvotos(), 
+                api.getSems(), 
+                api.getCharacters(), 
+                api.getMiracles()
+            ]);
             setExvotos(exvotoData);
             setSems(semData);
+            setCharacters(characterData);
+            setMiracles(miracleData);
         } catch (error) {
             console.error("Error fetching data:", error);
         } finally {
@@ -74,37 +85,40 @@ const ExvotoPage: React.FC = () => {
         if (semId === null || semId === undefined) {
             return null;
         }
-        return semNameMap[semId] || <span className="text-red-500 text-xs">ID inválido: {semId}</span>;
+        return semNameMap[semId] || `ID inválido: ${semId}`;
     }, [semNameMap]);
 
     const columns: ColumnDef<Exvoto>[] = useMemo(() => [
-        { key: 'internal_id', header: 'ID Interno' },
-        { 
-            key: 'offering_sem_id', 
-            header: 'SEM Ofrenda', 
-            type: 'foreignKey',
-            foreignKeyData: sems,
-            getDisplayValue: (row: Exvoto) => getSemDisplayValue(row.offering_sem_id)
-        },
-        { 
-            key: 'origin_sem_id', 
-            header: 'SEM Origen', 
-            type: 'foreignKey',
-            foreignKeyData: sems,
-            getDisplayValue: (row: Exvoto) => getSemDisplayValue(row.origin_sem_id)
-        },
-        { 
-            key: 'conservation_sem_id', 
-            header: 'SEM Conservación', 
-            type: 'foreignKey',
-            foreignKeyData: sems,
-            getDisplayValue: (row: Exvoto) => getSemDisplayValue(row.conservation_sem_id)
-        },
-        { key: 'virgin_or_saint', header: 'Virgen/Santo' },
-        { key: 'exvoto_date', header: 'Fecha', type: 'date' },
-        { key: 'miracle', header: 'Milagro' },
-        { key: 'actions', header: 'Acciones' },
-    ], [sems, getSemDisplayValue]);
+    { 
+        key: 'offering_sem_id', 
+        header: 'SEM Ofrenda', 
+        type: 'clickable', 
+        getDisplayValue: (row: Exvoto) => getSemDisplayValue(row.offering_sem_id),
+        onCellClick: (row: Exvoto) => {
+            if (row.offering_sem_id && semNameMap[row.offering_sem_id]) {
+                navigate(`/sem/${row.offering_sem_id}`);
+            }
+        }
+    },
+    { 
+        key: 'conservation_sem_id', 
+        header: 'SEM Conservación', 
+        type: 'clickable', 
+        getDisplayValue: (row: Exvoto) => getSemDisplayValue(row.conservation_sem_id),
+        onCellClick: (row: Exvoto) => {
+            if (row.conservation_sem_id && semNameMap[row.conservation_sem_id]) {
+                navigate(`/sem/${row.conservation_sem_id}`);
+            }
+        }
+    },
+    { key: 'virgin_or_saint', header: 'Virgen/Santo' },
+    { key: 'exvoto_date', header: 'Fecha Exvoto', type: 'date' },
+    { key: 'offerer_gender', header: 'Género Oferente' },
+    { key: 'offerer_relation', header: 'Relación Oferente' },
+    { key: 'miracle', header: 'Milagro' },
+    { key: 'text_form', header: 'Forma del Texto' },
+    { key: 'actions', header: 'Acciones' }
+    ], [sems, getSemDisplayValue, navigate, semNameMap]);
     
     const handleUpdate = async (id: number, data: Partial<Exvoto>) => {
         const updatedExvoto = await api.updateExvoto(id, data);
@@ -123,12 +137,48 @@ const ExvotoPage: React.FC = () => {
     };
 
     const handleOpenModal = () => {
+        setEditingExvoto(null);
         setNewExvotoData(getInitialExvotoData());
         setIsModalOpen(true);
     };
 
+    const handleEditExvoto = (id: number) => {
+        const exvoto = exvotos.find(e => e.id === id);
+        if (exvoto) {
+            setEditingExvoto(exvoto);
+            setNewExvotoData({
+                internal_id: exvoto.internal_id,
+                offering_sem_id: exvoto.offering_sem_id,
+                origin_sem_id: exvoto.origin_sem_id,
+                conservation_sem_id: exvoto.conservation_sem_id,
+                province: exvoto.province,
+                virgin_or_saint: exvoto.virgin_or_saint,
+                exvoto_date: exvoto.exvoto_date,
+                benefited_name: exvoto.benefited_name,
+                offerer_name: exvoto.offerer_name,
+                offerer_gender: exvoto.offerer_gender,
+                offerer_relation: exvoto.offerer_relation,
+                characters: exvoto.characters,
+                profession: exvoto.profession,
+                social_status: exvoto.social_status,
+                miracle: exvoto.miracle,
+                miracle_place: exvoto.miracle_place,
+                material: exvoto.material,
+                dimensions: exvoto.dimensions,
+                text_case: exvoto.text_case,
+                text_form: exvoto.text_form,
+                extra_info: exvoto.extra_info,
+                transcription: exvoto.transcription,
+                conservation_status: exvoto.conservation_status,
+                image: exvoto.image
+            });
+            setIsModalOpen(true);
+        }
+    };
+
     const handleModalClose = () => {
         setIsModalOpen(false);
+        setEditingExvoto(null);
     };
     
     const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -142,6 +192,9 @@ const ExvotoPage: React.FC = () => {
             finalValue = null;
         }
 
+        // Prevenir que el evento pierda el foco
+        e.stopPropagation();
+        
         setNewExvotoData(prev => ({
             ...prev,
             [name]: finalValue
@@ -150,7 +203,11 @@ const ExvotoPage: React.FC = () => {
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        await api.createExvoto(newExvotoData);
+        if (editingExvoto) {
+            await api.updateExvoto(editingExvoto.id, newExvotoData);
+        } else {
+            await api.createExvoto(newExvotoData);
+        }
         handleModalClose();
         await fetchData();
     };
@@ -160,7 +217,7 @@ const ExvotoPage: React.FC = () => {
         return <div className="text-center p-8">Cargando datos...</div>;
     }
     
-    const renderFormField = (label: string, name: keyof Omit<Exvoto, 'id' | 'image'>, type = 'text', options: {value: any, label: string}[] = []) => {
+const renderFormField = (label: string, name: keyof Omit<Exvoto, 'id' | 'image'>, type = 'text', options: {value: any, label: string}[] = []) => {
         const commonClass = "mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm";
         const value = newExvotoData[name] ?? '';
 
@@ -187,6 +244,15 @@ const ExvotoPage: React.FC = () => {
                         <option value="">-- Seleccionar --</option>
                         {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                      </select>
+                 ) : type === 'tagselect' ? (
+                     <TagSelect
+                        name={name}
+                        value={value as string}
+                        onChange={handleFormChange}
+                        options={characters}
+                        placeholder="Seleccionar personajes..."
+                        className={"mt-1"}
+                     />
                  ) : (
                      <input
                         type={type}
@@ -214,7 +280,7 @@ const ExvotoPage: React.FC = () => {
                 </button>
             </div>
 
-            <Modal isOpen={isModalOpen} onClose={handleModalClose} title="Añadir Nuevo Exvoto">
+            <Modal isOpen={isModalOpen} onClose={handleModalClose} title={editingExvoto ? "Editar Exvoto" : "Añadir Nuevo Exvoto"}>
                 <form onSubmit={handleFormSubmit}>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {renderFormField('ID Interno', 'internal_id')}
@@ -227,11 +293,11 @@ const ExvotoPage: React.FC = () => {
                         {renderFormField('Nombre Beneficiado', 'benefited_name')}
                         {renderFormField('Nombre Oferente', 'offerer_name')}
                         {renderFormField('Género Oferente', 'offerer_gender', 'select', [{value: 'Masculino', label: 'Masculino'}, {value: 'Femenino', label: 'Femenino'}, {value: 'Otro', label: 'Otro'}])}
-                        {renderFormField('Relación Oferente', 'offerer_relation')}
-                        {renderFormField('Personajes', 'characters')}
+                        {renderFormField('Relación Oferente', 'offerer_relation', 'select', [{ value: 'Padre', label: 'Padre' }, { value: 'Madre', label: 'Madre' }, { value: 'Hijo/a', label: 'Hijo/a' }, { value: 'Él mismo', label: 'Él mismo' }, { value: 'Ella misma', label: 'Ella misma' }, { value: 'Hermano/a', label: 'Hermano/a' }, { value: 'Abuelo/a', label: 'Abuelo/a' }, { value: 'Familiar', label: 'Familiar' }, { value: 'Amigo/a', label: 'Amigo/a' }, { value: 'Esposo/a', label: 'Esposo/a' }, { value: 'Propietario', label: 'Propietario' }, { value: 'Empleado', label: 'Empleado' }, { value: 'Testigo', label: 'Testigo' }, { value: 'Otros', label: 'Otros' }])}
+                        {renderFormField('Personajes', 'characters', 'tagselect')}
                         {renderFormField('Profesión', 'profession')}
                         {renderFormField('Estatus Social', 'social_status')}
-                        {renderFormField('Milagro', 'miracle')}
+                        {renderFormField('Milagro', 'miracle', 'select', miracles.map(m => ({ value: m.name, label: m.name })))}
                         {renderFormField('Lugar del Milagro', 'miracle_place')}
                         {renderFormField('Material', 'material')}
                         {renderFormField('Dimensiones', 'dimensions')}
@@ -247,7 +313,7 @@ const ExvotoPage: React.FC = () => {
                     </div>
                     <div className="flex justify-end pt-8 sticky bottom-0 bg-white py-4 -mx-6 px-6 border-t">
                       <button type="button" onClick={handleModalClose} className="mr-3 px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300">Cancelar</button>
-                      <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">Guardar Exvoto</button>
+                      <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">{editingExvoto ? "Actualizar Exvoto" : "Guardar Exvoto"}</button>
                     </div>
                 </form>
             </Modal>
@@ -258,6 +324,7 @@ const ExvotoPage: React.FC = () => {
                 onRowUpdate={handleUpdate}
                 onRowDelete={handleDelete}
                 onRowView={handleView}
+                onRowEdit={handleEditExvoto}
             />
         </div>
     );

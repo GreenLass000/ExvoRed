@@ -7,7 +7,7 @@ interface LayoutProps {
 
 const navItems = [
     { path: '/exvotos', label: 'Exvotos' },
-    { path: '/sem', label: 'SEM (Lugares)' },
+    { path: '/sems', label: 'SEM (Lugares)' },
     { path: '/catalog', label: 'Catálogos' },
     { path: '/characters', label: 'Personajes' },
     { path: '/miracles', label: 'Milagros' },

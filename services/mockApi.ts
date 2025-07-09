@@ -1,5 +1,5 @@
 
-import { Sem, Catalog, Exvoto } from '../types';
+import { Sem, Catalog, Exvoto, Character, Miracle, CatalogSem } from '../types';
 
 let sems: Sem[] = [
     { id: 1, name: "Santuario de la Esperanza", region: "Murcia", province: "Murcia", town: "Calasparra", associated_divinity: "Virgen de la Esperanza", festivity: "8 de Septiembre", pictorial_exvoto_count: 0, oldest_exvoto_date: null, newest_exvoto_date: null, other_exvotos: "Figuras de cera", comments: "Gran afluencia de peregrinos.", references: "Catálogo de Exvotos de Murcia", contact: "info@santuarioesperanza.com" },
@@ -10,6 +10,39 @@ let sems: Sem[] = [
 let catalogs: Catalog[] = [
     { id: 1, title: "Exvotos Pictóricos de Andalucía", reference: "ISBN-123-456", author: "Juan Pérez", publication_year: 2005, publication_place: "Madrid", catalog_location: "Biblioteca Nacional", exvoto_count: 500, related_places: "Sevilla, Granada", location_description: "Estudio exhaustivo.", comments: "Incluye fotografías de alta calidad." },
     { id: 2, title: "La fe del pueblo: exvotos murcianos", reference: "MUR-EXV-01", author: "María García", publication_year: 1998, publication_place: "Murcia", catalog_location: "Archivo Regional de Murcia", exvoto_count: 320, related_places: "Calasparra, Caravaca", location_description: "Centrado en el siglo XVIII.", comments: "" }
+];
+
+let characters: Character[] = [
+    { id: 1, name: "Mujer en cama" },
+    { id: 2, name: "Virgen apareciendo" },
+    { id: 3, name: "Hombre trabajando" },
+    { id: 4, name: "Santo" },
+    { id: 5, name: "Hombre con vacas" },
+    { id: 6, name: "San Roque" },
+    { id: 7, name: "Niño enfermo" },
+    { id: 8, name: "Madre rezando" },
+    { id: 9, name: "Accidente de coche" },
+    { id: 10, name: "Soldado" }
+];
+
+let miracles: Miracle[] = [
+    { id: 1, name: "Curación de enfermedad" },
+    { id: 2, name: "Encontrar trabajo" },
+    { id: 3, name: "Protección de ganado" },
+    { id: 4, name: "Supervivencia en accidente" },
+    { id: 5, name: "Curación de heridas" },
+    { id: 6, name: "Ayuda en parto" },
+    { id: 7, name: "Protección en guerra" },
+    { id: 8, name: "Recuperación de bienes" },
+    { id: 9, name: "Fin de sequía" },
+    { id: 10, name: "Protección en viaje" }
+];
+
+let catalogSems: CatalogSem[] = [
+    { id: 1, catalog_id: 1, sem_id: 1 },
+    { id: 2, catalog_id: 1, sem_id: 2 },
+    { id: 3, catalog_id: 2, sem_id: 1 },
+    { id: 4, catalog_id: 2, sem_id: 3 }
 ];
 
 let exvotos: Exvoto[] = [
@@ -158,6 +191,32 @@ export const deleteExvoto = (id: number) => {
     return simulateDelay({ success: true });
 };
 
+// --- CHARACTER API ---
+export const getCharacters = () => simulateDelay(characters);
+
+export const createCharacter = (name: string) => {
+    const newCharacter: Character = { id: characters.length + 1, name };
+    characters = [...characters, newCharacter];
+    return simulateDelay(newCharacter);
+};
+
+// --- MIRACLE API ---
+export const getMiracles = () => simulateDelay(miracles);
+
+export const createMiracle = (name: string) => {
+    const newMiracle: Miracle = { id: miracles.length + 1, name };
+    miracles = [...miracles, newMiracle];
+    return simulateDelay(newMiracle);
+};
+
+// --- CATALOG SEM API ---
+export const getCatalogSems = () => simulateDelay(catalogSems);
+
+export const getCatalogSemsByCatalogId = (catalogId: number) => {
+    const catalogSemsList = catalogSems.filter(cs => cs.catalog_id === catalogId);
+    return simulateDelay(catalogSemsList);
+};
+
 // --- UNIQUE VALUE API ---
 export const getUniqueCharacters = () => {
     const allCharacters = exvotos.map(e => e.characters).filter(Boolean) as string[];
@@ -169,18 +228,4 @@ export const getUniqueMiracles = () => {
     const allMiracles = exvotos.map(e => e.miracle).filter(Boolean) as string[];
     const uniqueMiracles = [...new Set(allMiracles)];
     return simulateDelay(uniqueMiracles);
-};
-
-// Create new character (adds to existing exvoto)
-export const createCharacter = (character: string) => {
-    // This would typically add to a separate characters table
-    // For now, we'll just return success
-    return simulateDelay({ success: true, character });
-};
-
-// Create new miracle (adds to existing exvoto)
-export const createMiracle = (miracle: string) => {
-    // This would typically add to a separate miracles table
-    // For now, we'll just return success
-    return simulateDelay({ success: true, miracle });
 };

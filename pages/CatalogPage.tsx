@@ -1,9 +1,10 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DataTable, ColumnDef } from '../components/DataTable';
 import { PlusIcon } from '../components/icons';
 import Modal from '../components/Modal';
-import { Catalog } from '../types';
+import { Catalog, Sem, CatalogSem } from '../types';
 import * as api from '../services/mockApi';
 
 const getInitialCatalogData = (): Omit<Catalog, 'id'> => ({
@@ -21,27 +22,42 @@ const getInitialCatalogData = (): Omit<Catalog, 'id'> => ({
 
 const columns: ColumnDef<Catalog>[] = [
     { key: 'title', header: 'Título' },
-    { key: 'reference', header: 'Referencia' },
-    { key: 'author', header: 'Autor' },
-    { key: 'publication_year', header: 'Año Pub.', type: 'number' },
-    { key: 'publication_place', header: 'Lugar Pub.' },
+    { key: 'catalog_location', header: 'Ubicación del Catálogo' },
     { key: 'exvoto_count', header: 'Nº Exvotos', type: 'number' },
+    { key: 'related_places', header: 'Lugares Relacionados' },
+    { key: 'provinces', header: 'Provincias Catalogadas' },
     { key: 'actions', header: 'Acciones' },
 ];
 
 const CatalogPage: React.FC = () => {
     const [catalogs, setCatalogs] = useState<Catalog[]>([]);
+    const [catalogSems, setCatalogSems] = useState<CatalogSem[]>([]);
+    const [sems, setSems] = useState<Sem[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingCatalog, setEditingCatalog] = useState<Catalog | null>(null);
     const [newCatalogData, setNewCatalogData] = useState<Omit<Catalog, 'id'>>(getInitialCatalogData());
+    const navigate = useNavigate();
+
+    const getProvincesByCatalogId = useCallback((catalogId: number) => {
+        const semIds = catalogSems.filter(cs => cs.catalog_id === catalogId).map(cs => cs.sem_id);
+        const provinces = sems.filter(sem => semIds.includes(sem.id)).map(sem => sem.province ?? '').filter(Boolean);
+        return provinces.length > 0 ? provinces.join(', ') : "No disponible";
+    }, [catalogSems, sems]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await api.getCatalogs();
+            const [data, catalogSemsData, semData] = await Promise.all([
+                api.getCatalogs(),
+                api.getCatalogSems(),
+                api.getSems()
+            ]);
             setCatalogs(data);
+            setCatalogSems(catalogSemsData);
+            setSems(semData);
         } catch (error) {
-            console.error("Error fetching catalogs:", error);
+            console.error("Error fetching catalogs or SEMs:", error);
         } finally {
             setLoading(false);
         }
@@ -52,12 +68,34 @@ const CatalogPage: React.FC = () => {
     }, [fetchData]);
 
     const handleOpenModal = () => {
+        setEditingCatalog(null);
         setNewCatalogData(getInitialCatalogData());
         setIsModalOpen(true);
     };
 
+    const handleEditCatalog = (id: number) => {
+        const catalog = catalogs.find(c => c.id === id);
+        if (catalog) {
+            setEditingCatalog(catalog);
+            setNewCatalogData({
+                title: catalog.title,
+                reference: catalog.reference,
+                author: catalog.author,
+                publication_year: catalog.publication_year,
+                publication_place: catalog.publication_place,
+                catalog_location: catalog.catalog_location,
+                exvoto_count: catalog.exvoto_count,
+                related_places: catalog.related_places,
+                location_description: catalog.location_description,
+                comments: catalog.comments
+            });
+            setIsModalOpen(true);
+        }
+    };
+
     const handleModalClose = () => {
         setIsModalOpen(false);
+        setEditingCatalog(null);
     };
 
     const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -77,7 +115,11 @@ const CatalogPage: React.FC = () => {
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        await api.createCatalog(newCatalogData);
+        if (editingCatalog) {
+            await api.updateCatalog(editingCatalog.id, newCatalogData);
+        } else {
+            await api.createCatalog(newCatalogData);
+        }
         handleModalClose();
         await fetchData();
     };
@@ -92,6 +134,10 @@ const CatalogPage: React.FC = () => {
     const handleDelete = async (id: number) => {
         await api.deleteCatalog(id);
         setCatalogs(prev => prev.filter(c => c.id !== id));
+    };
+
+    const handleViewDetail = (id: number) => {
+        navigate(`/catalog/${id}`);
     };
 
     if (loading) {
@@ -141,7 +187,7 @@ const CatalogPage: React.FC = () => {
                 </button>
             </div>
 
-            <Modal isOpen={isModalOpen} onClose={handleModalClose} title="Añadir Nuevo Catálogo">
+            <Modal isOpen={isModalOpen} onClose={handleModalClose} title={editingCatalog ? "Editar Catálogo" : "Añadir Nuevo Catálogo"}>
                 <form onSubmit={handleFormSubmit}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {renderFormField('Título', 'title')}
@@ -161,16 +207,26 @@ const CatalogPage: React.FC = () => {
                     </div>
                     <div className="flex justify-end pt-8 sticky bottom-0 bg-white py-4 -mx-6 px-6 border-t">
                         <button type="button" onClick={handleModalClose} className="mr-3 px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300">Cancelar</button>
-                        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">Guardar Catálogo</button>
+                        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">{editingCatalog ? "Actualizar Catálogo" : "Guardar Catálogo"}</button>
                     </div>
                 </form>
             </Modal>
 
             <DataTable<Catalog> 
                 data={catalogs} 
-                columns={columns}
+                columns={columns.map(col => {
+                    if (col.key === 'provinces') {
+                        return {
+                            ...col,
+                            getDisplayValue: (row: Catalog) => getProvincesByCatalogId(row.id)
+                        };
+                    }
+                    return col;
+                })}
                 onRowUpdate={handleUpdate}
                 onRowDelete={handleDelete}
+                onRowView={handleViewDetail}
+                onRowEdit={handleEditCatalog}
             />
         </div>
     );

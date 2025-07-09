@@ -58,4 +58,20 @@ export interface Exvoto {
     image: string | null; // Using string to represent blob data placeholder
 }
 
+export interface Character {
+    id: number;
+    name: string;
+}
+
+export interface Miracle {
+    id: number;
+    name: string;
+}
+
+export interface CatalogSem {
+    id: number;
+    catalog_id: number;
+    sem_id: number;
+}
+
 export type DataModel = Sem | Catalog | Exvoto;
