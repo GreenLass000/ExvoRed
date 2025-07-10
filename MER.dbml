@@ -1,0 +1,96 @@
+// Use DBML to define your database structure
+// Docs: https://dbml.dbdiagram.io/docs
+
+Table exvoto {
+  Note: "Representa un exvoto individual, con todos sus datos relacionados al milagro, oferente, beneficiado y conservación. En el apartado con la imagen/foto se puede añadir texto al pie de foto."
+
+  id integer [primary key, not null, increment]
+  internal_id varchar2(20) [note: "ID interno dentro del sem (puede repetirse en distintos sem)"]
+  offering_sem_id integer [note: "ID del sem (santuario/ermita/museo) donde se ofrece el exvoto"]
+  origin_sem_id integer [note: "ID del sem donde ocurre el milagro"]
+  conservation_sem_id integer [note: "ID del sem donde se conserva el exvoto"]
+  province varchar2(50) [note: "Provincia geográfica asociada (puede ser redundante si ya está en sem)"]
+  virgin_or_saint varchar2(100) [note: "Nombre de la Virgen o Santo a quien se dedica el exvoto"]
+  exvoto_date date [note: "Fecha en la que ocurre el exvoto"]
+  benefited_name varchar2(100) [note: "Nombre de la persona beneficiada por el milagro"]
+  offerer_name varchar2(100) [note: "Nombre del oferente"]
+  offerer_gender varchar2(10) [note: "Género del oferente"]
+  offerer_relation varchar2(100) [note: "Relación entre oferente y beneficiado"]
+  characters varchar2(200) [note: "Personajes representados en la imagen"]
+  profession varchar2(100) [note: "Profesión del oferente o beneficiado"]
+  social_status varchar2(100) [note: "Estatus social del oferente o beneficiado"]
+  miracle varchar2(50) [note: "Milagro por el que se ofrece el exvoto"]
+  miracle_place varchar2(200) [note: "Lugar donde ocurre el milagro (no necesariamente un sem)"]
+  material varchar2(100) [note: "Material del que está hecho el exvoto"]
+  dimensions varchar2(50) [note: "Dimensiones físicas del exvoto"]
+  text_case varchar2(20) [note: "Tipo de uso de mayúsculas/minúsculas en el texto"]
+  text_form varchar2(20) [note: "Forma del texto: manuscrito, impreso, etc."]
+  extra_info varchar2(500) [note: "Información adicional relevante"]
+  transcription text [note: "Transcripción del texto contenido en el exvoto"]
+  conservation_status varchar2(100) [note: "Estado de conservación actual"]
+  image blob [note: "Imagen digitalizada del exvoto, con posibilidad de texto al pie de foto"]
+}
+
+Table catalog {
+  Note: "Catálogo o publicación que documenta uno o varios exvotos"
+
+  id integer [primary key, not null, increment]
+  title varchar2(200) [note: "Título del catálogo"]
+  reference varchar2(200) [note: "Referencia bibliográfica o código de archivo"]
+  author varchar2(100) [note: "Autor o autores del catálogo"]
+  publication_year integer [note: "Año de publicación"]
+  publication_place varchar2(100) [note: "Lugar de publicación"]
+  catalog_location text [note: "Ubicación física del catálogo (archivo, biblioteca...) o enlace online"]
+  exvoto_count integer [note: "Número de exvotos registrados en el catálogo"]
+  location_description text [note: "Descripción del contexto geográfico o institucional"]
+  oldest_exvoto_date date [note: "Fecha del exvoto más antiguo"]
+  newest_exvoto_date date [note: "Fecha del exvoto más reciente"]
+  other_exvotos text [note: "Otras formas de exvotos presentes"]
+  numero_exvotos integer [note: "Número de exvotos"]
+  comments text [note: "Comentarios adicionales"]
+}
+
+Table sem {
+  Note: "Lugar físico: puede ser un santuario, ermita o museo (sem). Son los lugares de conservación actual."
+
+  id integer [primary key, not null, increment]
+  name varchar2(100) [note: "Nombre del sem"]
+  region varchar2(100) [note: "Región donde se encuentra el sem"]
+  province varchar2(100) [note: "Provincia del sem"]
+  town varchar2(100) [note: "Población o localidad"]
+  associated_divinity varchar2(100) [note: "Divinidad asociada al sem"]
+  festivity varchar2(100) [note: "Fiesta religiosa principal vinculada al sem"]
+  pictorial_exvoto_count integer [note: "Número de exvotos pictóricos registrados en el sem"]
+  oldest_exvoto_date date [note: "Fecha del exvoto más antiguo"]
+  newest_exvoto_date date [note: "Fecha del exvoto más reciente"]
+  other_exvotos text [note: "Otras formas de exvotos presentes"]
+  numero_exvotos integer [note: "Número de exvotos"]
+  comments text [note: "Observaciones o notas adicionales"]
+  references text [note: "Referencias bibliográficas relacionadas"]
+  contact text [note: "Información de contacto (si existe)"]
+}
+
+Table catalog_exvoto {
+  Note: "Tabla intermedia que vincula catálogos con los exvotos que documentan"
+
+  catalog_id integer [not null]
+  exvoto_id integer [not null]
+}
+
+Table catalog_sem {
+  Note: "Tabla intermedia que vincula catalogos con sem"
+  
+  catalog_id integer [not null]
+  sem_id integer [not null]
+}
+
+// Relationships
+Ref: exvoto.offering_sem_id > sem.id
+Ref: exvoto.origin_sem_id > sem.id
+Ref: exvoto.conservation_sem_id > sem.id
+
+Ref: catalog_exvoto.catalog_id > catalog.id
+Ref: catalog_exvoto.exvoto_id > exvoto.id
+
+Ref: catalog_sem.catalog_id > catalog.id
+Ref: catalog_sem.sem_id > sem.id
