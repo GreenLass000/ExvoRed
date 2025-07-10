@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Catalog } from '../types';
-import * as api from '../services/mockApi';
+import * as api from '../services/api';
+import { calculateCatalogStatistics } from '../utils';
 
 const CatalogDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -17,7 +18,19 @@ const CatalogDetailPage: React.FC = () => {
             try {
                 const catalogs = await api.getCatalogs();
                 const foundCatalog = catalogs.find(c => c.id === parseInt(id));
-                setCatalog(foundCatalog || null);
+                
+                if (foundCatalog) {
+                    // Calcular estadísticas dinámicamente
+                    const stats = await calculateCatalogStatistics(foundCatalog.id);
+                    const catalogWithStats = {
+                        ...foundCatalog,
+                        exvoto_count: stats.exvoto_count,
+                        related_places: stats.related_places
+                    };
+                    setCatalog(catalogWithStats);
+                } else {
+                    setCatalog(null);
+                }
             } catch (error) {
                 console.error('Error fetching catalog:', error);
             } finally {
@@ -45,6 +58,7 @@ const CatalogDetailPage: React.FC = () => {
             </div>
         );
     }
+
 
     const renderField = (label: string, value: string | number | null) => (
         <div className="mb-4">

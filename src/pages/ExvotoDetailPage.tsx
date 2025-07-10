@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Exvoto, Sem } from '../types';
-import * as api from '../services/mockApi';
+import * as api from '../services/api';
 
 const DetailField = ({ label, value }: { label: string, value: React.ReactNode }) => {
     if (value === null || value === undefined || value === '') {

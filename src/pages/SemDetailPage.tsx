@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Sem } from '../types';
-import * as api from '../services/mockApi';
+import * as api from '../services/api';
 
 const SemDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();

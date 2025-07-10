@@ -5,7 +5,8 @@ import { DataTable, ColumnDef } from '../components/DataTable';
 import { PlusIcon } from '../components/icons';
 import Modal from '../components/Modal';
 import { Catalog, Sem, CatalogSem } from '../types';
-import * as api from '../services/mockApi';
+import * as api from '../services/api';
+import { calculateCatalogStatistics } from '../utils';
 
 const getInitialCatalogData = (): Omit<Catalog, 'id'> => ({
     title: '',
@@ -53,7 +54,20 @@ const CatalogPage: React.FC = () => {
                 api.getCatalogSems(),
                 api.getSems()
             ]);
-            setCatalogs(data);
+            
+            // Calcular estadísticas dinámicamente para cada catálogo
+            const catalogsWithStats = await Promise.all(
+                data.map(async (catalog) => {
+                    const stats = await calculateCatalogStatistics(catalog.id);
+                    return {
+                        ...catalog,
+                        exvoto_count: stats.exvoto_count,
+                        related_places: stats.related_places
+                    };
+                })
+            );
+            
+            setCatalogs(catalogsWithStats);
             setCatalogSems(catalogSemsData);
             setSems(semData);
         } catch (error) {
@@ -98,7 +112,7 @@ const CatalogPage: React.FC = () => {
         setEditingCatalog(null);
     };
 
-    const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const handleFormChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
         
         let finalValue: string | number | null = value;
@@ -111,7 +125,7 @@ const CatalogPage: React.FC = () => {
             ...prev,
             [name]: finalValue
         }));
-    };
+    }, []);
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -140,11 +154,7 @@ const CatalogPage: React.FC = () => {
         navigate(`/catalog/${id}`);
     };
 
-    if (loading) {
-        return <div className="text-center p-8">Cargando datos...</div>;
-    }
-
-    const renderFormField = (label: string, name: keyof Omit<Catalog, 'id'>, type = 'text') => {
+    const renderFormField = useCallback((label: string, name: keyof Omit<Catalog, 'id'>, type = 'text') => {
         const commonClass = "mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm";
         const value = newCatalogData[name] ?? '';
 
@@ -172,7 +182,11 @@ const CatalogPage: React.FC = () => {
                 )}
             </div>
         );
-    };
+    }, [newCatalogData, handleFormChange]);
+
+    if (loading) {
+        return <div className="text-center p-8">Cargando datos...</div>;
+    }
 
     return (
         <div>

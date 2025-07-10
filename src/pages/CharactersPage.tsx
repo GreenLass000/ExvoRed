@@ -2,10 +2,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Modal from '../components/Modal';
 import { PlusIcon } from '../components/icons';
-import * as api from '../services/mockApi';
+import * as api from '../services/api';
+import { Character } from '../types';
 
 const CharactersPage: React.FC = () => {
-    const [characters, setCharacters] = useState<string[]>([]);
+    const [characters, setCharacters] = useState<Character[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newCharacter, setNewCharacter] = useState('');
@@ -13,7 +14,7 @@ const CharactersPage: React.FC = () => {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await api.getUniqueCharacters();
+            const data = await api.getCharacters();
             setCharacters(data);
         } catch (error) {
             console.error("Error fetching characters:", error);
@@ -103,8 +104,8 @@ const CharactersPage: React.FC = () => {
             <div className="bg-white rounded-lg shadow p-6">
                 {characters.length > 0 ? (
                     <ul className="list-disc list-inside space-y-2">
-                        {characters.map((character, index) => (
-                            <li key={index} className="text-slate-800">{character}</li>
+                        {characters.map((character) => (
+                            <li key={character.id} className="text-slate-800">{character.name}</li>
                         ))}
                     </ul>
                 ) : (

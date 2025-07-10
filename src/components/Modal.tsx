@@ -1,5 +1,4 @@
-
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 
 interface ModalProps {
     isOpen: boolean;
@@ -9,43 +8,37 @@ interface ModalProps {
 }
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
-    const modalRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') {
-                onClose();
-            }
-        };
-
-        if (isOpen) {
-            document.addEventListener('keydown', handleKeyDown);
-            modalRef.current?.focus();
-        }
-
-        return () => {
-            document.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [isOpen, onClose]);
-
     if (!isOpen) return null;
 
+    const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (e.target === e.currentTarget) {
+            onClose();
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === 'Escape') {
+            onClose();
+        }
+    };
+
     return (
-        <div 
+        <div
             className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center"
-            onClick={onClose}
+            onClick={handleOverlayClick}
+            onKeyDown={handleKeyDown}
             aria-modal="true"
             role="dialog"
         >
-            <div 
-                ref={modalRef}
+            <div
                 className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col"
-                onClick={e => e.stopPropagation()}
                 tabIndex={-1}
+                autoFocus
+                onClick={e => e.stopPropagation()}
             >
                 <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white z-10">
                     <h2 className="text-xl font-semibold text-slate-700">{title}</h2>
-                    <button 
+                    <button
                         onClick={onClose}
                         className="text-slate-400 hover:text-slate-600"
                         aria-label="Cerrar modal"

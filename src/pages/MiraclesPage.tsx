@@ -2,10 +2,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Modal from '../components/Modal';
 import { PlusIcon } from '../components/icons';
-import * as api from '../services/mockApi';
+import * as api from '../services/api';
+import { Miracle } from '../types';
 
 const MiraclesPage: React.FC = () => {
-    const [miracles, setMiracles] = useState<string[]>([]);
+    const [miracles, setMiracles] = useState<Miracle[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newMiracle, setNewMiracle] = useState('');
@@ -13,7 +14,7 @@ const MiraclesPage: React.FC = () => {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await api.getUniqueMiracles();
+            const data = await api.getMiracles();
             setMiracles(data);
         } catch (error) {
             console.error("Error fetching miracles:", error);
@@ -103,8 +104,8 @@ const MiraclesPage: React.FC = () => {
             <div className="bg-white rounded-lg shadow p-6">
                 {miracles.length > 0 ? (
                     <ul className="list-disc list-inside space-y-2">
-                        {miracles.map((miracle, index) => (
-                            <li key={index} className="text-slate-800">{miracle}</li>
+                        {miracles.map((miracle) => (
+                            <li key={miracle.id} className="text-slate-800">{miracle.name}</li>
                         ))}
                     </ul>
                 ) : (
