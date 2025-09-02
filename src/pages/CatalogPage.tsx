@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ColumnDef } from '../components/DataTable';
 import { ExcelTable } from '../components/excel';
 import { PlusIcon } from '../components/icons';
@@ -53,6 +53,7 @@ const CatalogPage: React.FC = () => {
     const [editingCatalog, setEditingCatalog] = useState<Catalog | null>(null);
     const [newCatalogData, setNewCatalogData] = useState<Omit<Catalog, 'id'>>(getInitialCatalogData());
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const getProvincesByCatalogId = useCallback((catalogId: number) => {
         const semIds = catalogSems.filter(cs => cs.catalog_id === catalogId).map(cs => cs.sem_id);
@@ -94,6 +95,38 @@ const CatalogPage: React.FC = () => {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    // Handle URL parameters for edit mode
+    useEffect(() => {
+        const editId = searchParams.get('edit');
+        if (editId && catalogs.length > 0) {
+            const catalogId = parseInt(editId, 10);
+            const catalog = catalogs.find(c => c.id === catalogId);
+            if (catalog) {
+                // Open edit modal
+                setEditingCatalog(catalog);
+                setNewCatalogData({
+                    title: catalog.title,
+                    reference: catalog.reference,
+                    author: catalog.author,
+                    publication_year: catalog.publication_year,
+                    publication_place: catalog.publication_place,
+                    catalog_location: catalog.catalog_location,
+                    exvoto_count: catalog.exvoto_count,
+                    location_description: catalog.location_description,
+                    oldest_exvoto_date: catalog.oldest_exvoto_date,
+                    newest_exvoto_date: catalog.newest_exvoto_date,
+                    other_exvotos: catalog.other_exvotos,
+                    numero_exvotos: catalog.numero_exvotos,
+                    comments: catalog.comments
+                });
+                setIsModalOpen(true);
+                
+                // Clean URL parameter
+                setSearchParams({});
+            }
+        }
+    }, [searchParams, catalogs, setSearchParams]);
 
     const handleOpenModal = () => {
         setEditingCatalog(null);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Sem } from '../types';
 import * as api from '../services/api';
@@ -27,6 +27,38 @@ const SemDetailPage: React.FC = () => {
 
         fetchSem();
     }, [id]);
+
+    const handleEditSem = useCallback(() => {
+        if (sem) {
+            // Navigate to the SEMs page with edit mode for this specific SEM
+            navigate(`/sems?edit=${sem.id}`);
+        }
+    }, [sem, navigate]);
+
+    // Handle keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Don't handle keyboard shortcuts if user is typing in an input field
+            const target = e.target as HTMLElement;
+            const isInputField = target && (
+                target.tagName === 'INPUT' ||
+                target.tagName === 'TEXTAREA' ||
+                target.tagName === 'SELECT' ||
+                target.contentEditable === 'true' ||
+                target.getAttribute('role') === 'textbox'
+            );
+            
+            if (isInputField) return;
+            
+            if (e.shiftKey && e.key === 'E') {
+                e.preventDefault();
+                handleEditSem();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [handleEditSem]);
 
     if (loading) {
         return <div className="text-center p-8">Cargando detalles del SEM...</div>;

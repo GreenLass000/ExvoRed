@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Exvoto, Sem } from '../types';
 import * as api from '../services/api';
 
@@ -18,6 +18,7 @@ const DetailField = ({ label, value }: { label: string, value: React.ReactNode }
 
 const ExvotoDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
     const [exvoto, setExvoto] = useState<Exvoto | null>(null);
     const [sems, setSems] = useState<Sem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -62,6 +63,38 @@ const ExvotoDetailPage: React.FC = () => {
             return acc;
         }, {} as Record<number, string>);
     }, [sems]);
+
+    const handleEditExvoto = useCallback(() => {
+        if (exvoto) {
+            // Navigate to the exvotos page with edit mode for this specific exvoto
+            navigate(`/exvotos?edit=${exvoto.id}`);
+        }
+    }, [exvoto, navigate]);
+
+    // Handle keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Don't handle keyboard shortcuts if user is typing in an input field
+            const target = e.target as HTMLElement;
+            const isInputField = target && (
+                target.tagName === 'INPUT' ||
+                target.tagName === 'TEXTAREA' ||
+                target.tagName === 'SELECT' ||
+                target.contentEditable === 'true' ||
+                target.getAttribute('role') === 'textbox'
+            );
+            
+            if (isInputField) return;
+            
+            if (e.shiftKey && e.key === 'E') {
+                e.preventDefault();
+                handleEditExvoto();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [handleEditExvoto]);
 
     if (loading) {
         return <div className="text-center p-8">Cargando detalles del exvoto...</div>;

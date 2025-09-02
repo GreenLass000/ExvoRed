@@ -1,15 +1,14 @@
-import React, { useRef, useEffect, useMemo, useCallback, forwardRef, useImperativeHandle } from 'react';
+import React, { useRef, useEffect, useMemo, useCallback, forwardRef, useImperativeHandle, useState } from 'react';
 import { cn } from '../../lib/utils';
 import { ColumnDef } from '../DataTable';
 import { useExcelMode } from '../../hooks/useExcelMode';
 import { useExcelKeyboard } from '../../hooks/useExcelKeyboard';
-import {
-  ResizableColumn,
-  ColumnVisibilityPanel,
-  DraggableColumn,
-  ColumnHeader,
-  CellModal
-} from './';
+import ResizableColumn from './ResizableColumn';
+import ColumnVisibilityPanel from './ColumnVisibilityPanel';
+import DraggableColumn from './DraggableColumn';
+import ColumnHeader from './ColumnHeader';
+import CellModal from './CellModal';
+import EditCellModal from './EditCellModal';
 
 interface ExcelTableProps<T> {
   data: T[];
@@ -33,6 +32,11 @@ interface ExcelTableProps<T> {
   onNavigateExvotos?: () => void;
   blockNavigation?: boolean;
   inDetailsTab?: boolean;
+  // Navigation for foreign key references
+  onNavigateToReference?: (referenceType: 'sem' | 'catalog', referenceId: number) => void;
+  // Inline editing support
+  onRowUpdate?: (id: any, data: Partial<T>) => Promise<any>;
+  enableInlineEdit?: boolean;
 }
 
 export interface ExcelTableRef {
@@ -60,13 +64,87 @@ const ExcelTableInner = <T extends Record<string, any>>({
   onNavigateCatalog,
   onNavigateExvotos,
   blockNavigation = false,
-  inDetailsTab = false
+  inDetailsTab = false,
+  onNavigateToReference,
+  onRowUpdate,
+  enableInlineEdit = false
 }: ExcelTableProps<T>, ref: React.Ref<ExcelTableRef>) => {
   const tableRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   
   // Excel mode state and actions
   const [excelState, excelActions] = useExcelMode(columns, data, idField);
+  
+  // Inline editing state
+  const [editingCell, setEditingCell] = useState<{ rowIndex: number; columnKey: string } | null>(null);
+  const [editValue, setEditValue] = useState<any>('');
+  const [status, setStatus] = useState<{ rowIndex: number, message: string, type: 'info' | 'error' } | null>(null);
+  const inputRef = useRef<HTMLInputElement | HTMLSelectElement>(null);
+  
+  // Focus on editing input when entering edit mode
+  useEffect(() => {
+    if (editingCell && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [editingCell]);
+  
+  // Inline editing functions
+  const handleCellDoubleClick = useCallback((rowIndex: number, columnKey: string) => {
+    if (!enableInlineEdit || !onRowUpdate) return;
+    
+    const rowData = excelState.filteredData[rowIndex];
+    if (!rowData) return;
+    
+    setEditingCell({ rowIndex, columnKey });
+    setEditValue(rowData[columnKey] ?? '');
+  }, [enableInlineEdit, onRowUpdate, excelState.filteredData]);
+  
+  const handleEditChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setEditValue(e.target.value);
+  }, []);
+  
+  const saveChanges = useCallback(async () => {
+    if (!editingCell || !onRowUpdate) return;
+    
+    const { rowIndex, columnKey } = editingCell;
+    const originalRow = excelState.filteredData[rowIndex];
+    if (!originalRow) return;
+    
+    const originalValue = originalRow[columnKey];
+    let finalValue: any = editValue;
+    
+    const columnDef = columns.find(c => String(c.key) === columnKey);
+    if (columnDef?.type === 'number' || columnDef?.type === 'foreignKey') {
+      finalValue = editValue === '' || editValue === null ? null : Number(editValue);
+    }
+    
+    if (finalValue !== originalValue) {
+      setStatus({ rowIndex, message: 'Guardando...', type: 'info' });
+      try {
+        const rowId = originalRow[idField];
+        await onRowUpdate(rowId, { [columnKey]: finalValue } as Partial<T>);
+        setStatus({ rowIndex, message: '¡Guardado!', type: 'info' });
+      } catch (error) {
+        setStatus({ rowIndex, message: 'Error al guardar', type: 'error' });
+        console.error('Error al actualizar fila:', error);
+      }
+    }
+    
+    setEditingCell(null);
+    setTimeout(() => setStatus(null), 2000);
+  }, [editingCell, editValue, onRowUpdate, excelState.filteredData, columns, idField]);
+  
+  const handleInputBlur = useCallback(() => {
+    saveChanges();
+  }, [saveChanges]);
+  
+  const handleInputKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      saveChanges();
+    } else if (e.key === 'Escape') {
+      setEditingCell(null);
+    }
+  }, [saveChanges]);
   
   // Select default cell A1 on mount or when data/columns ready
   useEffect(() => {
@@ -125,10 +203,17 @@ const ExcelTableInner = <T extends Record<string, any>>({
   // Keyboard navigation
   useExcelKeyboard(excelState, excelActions, {
     enabled: enableKeyboardNavigation,
-    // 'e' -> edit cell (expand cell modal)
+    // 'e' -> edit cell - open edit modal if onRowUpdate available, otherwise expand cell
     onEditCell: (rowIndex, columnKey) => {
       const rowData = excelState.filteredData[rowIndex];
-      if (rowData) {
+      if (rowData && onRowUpdate) {
+        // Get the actual cell value
+        const cellValue = rowData[columnKey];
+        // Start edit mode for this cell with the current value
+        setEditingCell({ rowIndex, columnKey });
+        setEditValue(cellValue); // Use the actual value, not converted to string
+      } else if (rowData) {
+        // Fallback to readonly cell modal
         const content = String(rowData[columnKey] ?? '');
         excelActions.expandCell(content, rowIndex, columnKey);
       }
@@ -143,6 +228,8 @@ const ExcelTableInner = <T extends Record<string, any>>({
       const rowData = excelState.filteredData[rowIndex];
       if (rowData) onEdit?.(rowIndex, excelState.selectedCell?.columnKey || '', rowData);
     },
+    // Enter -> inline editing when available
+    onStartInlineEdit: enableInlineEdit && onRowUpdate ? handleCellDoubleClick : undefined,
     inDetailsTab,
     // 'p' handled in keyboard (only in details)
     onPrint,
@@ -165,7 +252,8 @@ const ExcelTableInner = <T extends Record<string, any>>({
       } catch (err) {
         console.warn('Failed to copy to clipboard:', err);
       }
-    }
+    },
+    onNavigateToReference
   });
 
   // Ajustar altura del contenedor de scroll para que llegue al final de la página
@@ -206,14 +294,12 @@ const ExcelTableInner = <T extends Record<string, any>>({
   const handleCellClick = useCallback((rowIndex: number, columnKey: string, event: React.MouseEvent) => {
     excelActions.selectCell(rowIndex, columnKey);
     
-    // Double click to expand cell
+    // Double click opens cell modal for viewing
     if (event.detail === 2) {
       const rowData = excelState.filteredData[rowIndex];
       if (rowData) {
         const content = String(rowData[columnKey] || '');
-        if (content.length > 0) {
-          excelActions.expandCell(content, rowIndex, columnKey);
-        }
+        excelActions.expandCell(content, rowIndex, columnKey);
       }
     }
   }, [excelActions, excelState.filteredData]);
@@ -247,9 +333,28 @@ const ExcelTableInner = <T extends Record<string, any>>({
   }, [columns, data]);
 
   // Render cell content
-  const renderCellContent = useCallback((item: T, columnKey: string) => {
+  const renderCellContent = useCallback((item: T, columnKey: string, rowIndex: number) => {
     const column = columns.find(col => String(col.key) === columnKey);
+    
+    // Show status message if this row has one
+    if (status?.rowIndex === rowIndex) {
+      return (
+        <span className={cn(
+          "text-xs font-medium",
+          status.type === 'error' ? 'text-red-600' : 'text-green-600'
+        )}>
+          {status.message}
+        </span>
+      );
+    }
+    
+    // Normal cell content rendering
     const value = item[columnKey];
+    
+    // Use getDisplayValue first if available (for foreign key columns)
+    if (column?.getDisplayValue) {
+      return column.getDisplayValue(item) || '';
+    }
     
     if (column?.render) {
       return column.render(value, item);
@@ -260,7 +365,7 @@ const ExcelTableInner = <T extends Record<string, any>>({
     if (value instanceof Date) return value.toLocaleDateString();
     
     return String(value);
-  }, [columns]);
+  }, [columns, status]);
 
 
   return (
@@ -361,6 +466,10 @@ const ExcelTableInner = <T extends Record<string, any>>({
                       "px-3 py-2 text-sm text-gray-900 cursor-cell bg-white",
                       "overflow-hidden text-ellipsis whitespace-nowrap h-10 flex items-center flex-shrink-0",
                       "border-r border-gray-200 last:border-r-0",
+                      // Special styling for foreign key cells
+                      (column.key.includes('sem_id') || column.key.includes('catalog_id')) &&
+                      item[column.key] &&
+                      "hover:bg-blue-50 hover:text-blue-700 transition-colors cursor-pointer",
                       excelState.selectedCell?.rowIndex === rowIndex && 
                       excelState.selectedCell?.columnKey === column.key &&
                       "ring-2 ring-blue-500 bg-blue-50 ring-inset"
@@ -374,7 +483,7 @@ const ExcelTableInner = <T extends Record<string, any>>({
                     onClick={(e) => handleCellClick(rowIndex, column.key, e)}
                     title={String(item[column.key] || '')}
                   >
-                    {renderCellContent(item, column.key)}
+                    {renderCellContent(item, column.key, rowIndex)}
                   </div>
                 ))}
               </div>
@@ -402,6 +511,31 @@ const ExcelTableInner = <T extends Record<string, any>>({
           onClose={excelActions.closeCellModal}
         />
       )}
+      
+      {/* Edit Cell Modal */}
+      {editingCell && onRowUpdate && (
+        <EditCellModal
+          isOpen={!!editingCell}
+          title={columns.find(col => String(col.key) === editingCell.columnKey)?.header || editingCell.columnKey}
+          rowIndex={editingCell.rowIndex}
+          columnKey={editingCell.columnKey}
+          initialValue={editValue}
+          column={columns.find(col => String(col.key) === editingCell.columnKey)}
+          onClose={() => {
+            setEditingCell(null);
+            setEditValue(''); // Clear edit value when closing
+          }}
+          onSave={async (newValue) => {
+            const originalRow = excelState.filteredData[editingCell.rowIndex];
+            if (originalRow && onRowUpdate) {
+              const rowId = originalRow[idField];
+              await onRowUpdate(rowId, { [editingCell.columnKey]: newValue } as Partial<T>);
+            }
+            setEditingCell(null);
+            setEditValue(''); // Clear edit value after saving
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -410,5 +544,8 @@ const ExcelTableInner = <T extends Record<string, any>>({
 export const ExcelTable = forwardRef(ExcelTableInner) as <T extends Record<string, any>>(
   props: ExcelTableProps<T> & { ref?: React.Ref<ExcelTableRef> }
 ) => React.ReactElement;
+
+// Export the ref type
+export type { ExcelTableRef };
 
 export default ExcelTable;

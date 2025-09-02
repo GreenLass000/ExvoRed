@@ -20,6 +20,10 @@ interface ExcelKeyboardOptions {
   onExport?: () => void;
   onSelectAll?: () => void;
   onCopy?: (content: string) => void;
+  // Foreign key navigation
+  onNavigateToReference?: (referenceType: 'sem' | 'catalog', referenceId: number) => void;
+  // Inline editing support
+  onStartInlineEdit?: (rowIndex: number, columnKey: string) => void; // Enter - for inline editing
 }
 
 export function useExcelKeyboard<T extends Record<string, any>>(
@@ -32,6 +36,18 @@ export function useExcelKeyboard<T extends Record<string, any>>(
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!options.enabled || !state.isExcelModeEnabled) return;
+
+    // Don't handle keyboard shortcuts if user is typing in an input field
+    const target = e.target as HTMLElement;
+    const isInputField = target && (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.tagName === 'SELECT' ||
+      target.contentEditable === 'true' ||
+      target.getAttribute('role') === 'textbox'
+    );
+    
+    if (isInputField) return;
 
     const currentTime = Date.now();
     const isRepeating = currentTime - lastKeyTime.current < 50; // Throttle rapid key repeats
@@ -108,25 +124,19 @@ export function useExcelKeyboard<T extends Record<string, any>>(
       case 'Enter':
         if (!isRepeating) {
           if (state.selectedCell) {
+            // Always open cell modal for viewing content - no navigation
             const rowData = state.filteredData[state.selectedCell.rowIndex];
             if (rowData) {
               const cellContent = String(rowData[state.selectedCell.columnKey] || '');
-              if (cellContent.length > 50 || cellContent.includes('\n')) {
-                // Open cell modal for long content
-                actions.expandCell(
-                  cellContent,
-                  state.selectedCell.rowIndex,
-                  state.selectedCell.columnKey
-                );
-              }
+              // Open cell modal for content viewing
+              actions.expandCell(
+                cellContent,
+                state.selectedCell.rowIndex,
+                state.selectedCell.columnKey
+              );
             }
           }
-          
-          if (isShift) {
-            actions.navigateCell('up');
-          } else {
-            actions.navigateCell('down');
-          }
+          // No automatic navigation with Enter - user can use arrows
         }
         break;
 
@@ -184,12 +194,16 @@ export function useExcelKeyboard<T extends Record<string, any>>(
 
       case 'Escape':
         if (!isRepeating) {
-          if (state.showCellModal) {
-            actions.closeCellModal();
-          } else if (state.showColumnPanel) {
-            actions.toggleColumnPanel();
-          } else {
-            actions.clearSelection();
+          // Don't handle escape if there are modals open - let them handle it
+          const hasOpenModal = document.querySelector('.fixed.inset-0.z-50');
+          if (!hasOpenModal) {
+            if (state.showCellModal) {
+              actions.closeCellModal();
+            } else if (state.showColumnPanel) {
+              actions.toggleColumnPanel();
+            } else {
+              actions.clearSelection();
+            }
           }
         }
         break;
@@ -222,10 +236,39 @@ export function useExcelKeyboard<T extends Record<string, any>>(
 
       case 'i':
         if (!isRepeating && state.selectedCell && !isCtrl) {
-          if (options.onOpenDetails) {
-            options.onOpenDetails(state.selectedCell.rowIndex, state.selectedCell.columnKey);
-          } else {
-            options.onInspect?.(state.selectedCell.rowIndex, state.selectedCell.columnKey);
+          const rowData = state.filteredData[state.selectedCell.rowIndex];
+          const columnKey = state.selectedCell.columnKey;
+          
+          if (rowData) {
+            // Check if current cell contains a foreign key reference
+            let referenceNavigated = false;
+            
+            // Handle SEM foreign key references
+            if (columnKey.includes('sem_id') && options.onNavigateToReference) {
+              const semId = rowData[columnKey];
+              if (semId && typeof semId === 'number') {
+                options.onNavigateToReference('sem', semId);
+                referenceNavigated = true;
+              }
+            }
+            
+            // Handle Catalog foreign key references
+            if (columnKey.includes('catalog_id') && options.onNavigateToReference) {
+              const catalogId = rowData[columnKey];
+              if (catalogId && typeof catalogId === 'number') {
+                options.onNavigateToReference('catalog', catalogId);
+                referenceNavigated = true;
+              }
+            }
+            
+            // If no foreign key reference was found, use default behavior
+            if (!referenceNavigated) {
+              if (options.onOpenDetails) {
+                options.onOpenDetails(state.selectedCell.rowIndex, state.selectedCell.columnKey);
+              } else {
+                options.onInspect?.(state.selectedCell.rowIndex, state.selectedCell.columnKey);
+              }
+            }
           }
         }
         break;

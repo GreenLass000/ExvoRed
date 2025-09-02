@@ -5,7 +5,9 @@ export { default as DraggableColumn } from './DraggableColumn';
 export { default as ColumnHeader } from './ColumnHeader';
 export { default as HorizontalScrollBar } from './HorizontalScrollBar';
 export { default as CellModal } from './CellModal';
-export { default as ExcelTable } from './ExcelTable';
+export { default as EditCellModal } from './EditCellModal';
+export { ExcelTable } from './ExcelTable';
+export type { ExcelTableRef } from './ExcelTable';
 
 // Hooks
 export { useExcelMode } from '../../hooks/useExcelMode';

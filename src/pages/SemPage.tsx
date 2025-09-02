@@ -1,7 +1,7 @@
 // Página SEM corregida: evita uso incorrecto de hooks y estabiliza renderizado
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ColumnDef } from '../components/DataTable';
 import { ExcelTable } from '../components/excel';
 import { PlusIcon } from '../components/icons';
@@ -53,6 +53,7 @@ const SemPage: React.FC = () => {
   const [editingSem, setEditingSem] = useState<Sem | null>(null);
   const [newSemData, setNewSemData] = useState<Omit<Sem, 'id'>>(getInitialSemData());
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -69,6 +70,25 @@ const SemPage: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Handle URL parameters for edit mode
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    if (editId && sems.length > 0) {
+      const semId = parseInt(editId, 10);
+      const sem = sems.find(s => s.id === semId);
+      if (sem) {
+        // Open edit modal
+        const { id: _, ...rest } = sem;
+        setEditingSem(sem);
+        setNewSemData({ ...rest });
+        setIsModalOpen(true);
+        
+        // Clean URL parameter
+        setSearchParams({});
+      }
+    }
+  }, [searchParams, sems, setSearchParams]);
 
   const handleOpenModal = () => {
     setEditingSem(null);

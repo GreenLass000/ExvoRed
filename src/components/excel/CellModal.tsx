@@ -1,5 +1,6 @@
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { cn } from '../../lib/utils';
+import { ColumnDef } from '../DataTable';
 
 interface CellModalProps {
   isOpen: boolean;
@@ -9,6 +10,11 @@ interface CellModalProps {
   columnKey: string;
   onClose: () => void;
   className?: string;
+  // New props for editing
+  editMode?: boolean;
+  column?: ColumnDef<any>;
+  onSave?: (newValue: any) => Promise<void>;
+  initialValue?: any;
 }
 
 export const CellModal: React.FC<CellModalProps> = ({
@@ -18,10 +24,21 @@ export const CellModal: React.FC<CellModalProps> = ({
   rowIndex,
   columnKey,
   onClose,
-  className = ''
+  className = '',
+  editMode = false,
+  column,
+  onSave,
+  initialValue
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement | HTMLSelectElement>(null);
+  
+  // State for editing
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState<any>(initialValue ?? '');
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Handle escape key
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -30,11 +47,11 @@ export const CellModal: React.FC<CellModalProps> = ({
     }
   }, [onClose]);
 
-  // Auto-focus and select content when modal opens
+  // Auto-focus but don't select content when modal opens (readonly modal)
   useEffect(() => {
     if (isOpen && textareaRef.current) {
       textareaRef.current.focus();
-      textareaRef.current.select();
+      // Don't select text in readonly modal - just focus
     }
   }, [isOpen]);
 

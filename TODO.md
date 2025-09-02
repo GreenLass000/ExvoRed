@@ -36,13 +36,13 @@ Mantén un registro claro del progreso. Marca con [x] lo completado.
   - [x] Integrado en: ExvotoPage, SemPage, CatalogPage, DivinitiesPage, CharactersPage, MiraclesPage
 
 - [ ] Modo "Excel":
-  - [ ] Movimiento estilo Excel
-  - [ ] Slider horizontal para columnas fuera de la pantalla
-  - [ ] Poder ocultar columnas
-  - [ ] Cambiar tamaño de columna
+  - [x] Movimiento estilo Excel
+  - [x] Slider horizontal para columnas fuera de la pantalla
+  - [x] Poder ocultar columnas
+  - [x] Cambiar tamaño de columna
   - [ ] Filtro asc/desc en cabecera (como Explorador de Windows)
   - [ ] Si el texto de una celda se desborda, truncar y al pulsar ENTER mostrar en modal; ESCAPE cierra el modal
-  - [ ] Reordenar columnas
+  - [x] Reordenar columnas
   - [ ] Cambiar color de celdas
   - [ ] Filtros de ordenación:
     - [ ] A-Z
@@ -52,12 +52,12 @@ Mantén un registro claro del progreso. Marca con [x] lo completado.
     - [ ] Filtrar por provincia
     - [ ] Filtrar por épocas
 
-- [ ] Keybinds:
-  - [ ] e → edit field
-  - [ ] d → details
-  - [ ] E → edit row
-  - [ ] i → inspect (navega a detalles vinculados)
-  - [ ] p → print (solo en detalles)
+- [x] Keybinds:
+  - [x] e → edit field
+  - [x] d → details (deprecated - use 'i')
+  - [x] E → edit row (Shift+E from details pages)
+  - [x] i → inspect (navega a detalles vinculados y referencias de FK)
+  - [x] p → print (solo en detalles)
 
 - [ ] Exportar a CSV o Excel
 

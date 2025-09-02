@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Catalog } from '../types';
 import * as api from '../services/api';
@@ -40,6 +40,38 @@ const CatalogDetailPage: React.FC = () => {
 
         fetchCatalog();
     }, [id]);
+
+    const handleEditCatalog = useCallback(() => {
+        if (catalog) {
+            // Navigate to the catalog page with edit mode for this specific catalog
+            navigate(`/catalog?edit=${catalog.id}`);
+        }
+    }, [catalog, navigate]);
+
+    // Handle keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Don't handle keyboard shortcuts if user is typing in an input field
+            const target = e.target as HTMLElement;
+            const isInputField = target && (
+                target.tagName === 'INPUT' ||
+                target.tagName === 'TEXTAREA' ||
+                target.tagName === 'SELECT' ||
+                target.contentEditable === 'true' ||
+                target.getAttribute('role') === 'textbox'
+            );
+            
+            if (isInputField) return;
+            
+            if (e.shiftKey && e.key === 'E') {
+                e.preventDefault();
+                handleEditCatalog();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [handleEditCatalog]);
 
     if (loading) {
         return <div className="text-center p-8">Cargando detalles del catálogo...</div>;

@@ -3,7 +3,7 @@
 // - Evita perder el foco en inputs
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ColumnDef } from '../components/DataTable';
 import { ExcelTable, ExcelTableRef } from '../components/excel';
 import { PlusIcon } from '../components/icons';
@@ -60,6 +60,7 @@ const ExvotoPage: React.FC = () => {
   const [searchResults, setSearchResults] = useState<Array<{ rowIndex: number; columnKey: string; content: string }>>([]);
   
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -85,6 +86,25 @@ const ExvotoPage: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
+  // Handle URL parameters for edit mode
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    if (editId && exvotos.length > 0) {
+      const exvotoId = parseInt(editId, 10);
+      const exvoto = exvotos.find(e => e.id === exvotoId);
+      if (exvoto) {
+        // Open edit modal
+        const { id: _, ...rest } = exvoto;
+        setEditingExvoto(exvoto);
+        setNewExvotoData({ ...rest });
+        setIsModalOpen(true);
+        
+        // Clean URL parameter
+        setSearchParams({});
+      }
+    }
+  }, [searchParams, exvotos, setSearchParams]);
+
   const semNameMap = useMemo(() => {
     return sems.reduce((acc, sem) => {
       acc[sem.id] = sem.name || `SEM #${sem.id}`;
@@ -102,21 +122,24 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
     {
       key: 'offering_sem_id',
       header: 'SEM Ofrenda',
-      type: 'clickable',
+      type: 'foreignKey',
+      foreignKeyData: sems,
       getDisplayValue: row => getSemDisplayValue(row.offering_sem_id),
       onCellClick: row => row.offering_sem_id && navigate(`/sem/${row.offering_sem_id}`)
     },
     {
       key: 'origin_sem_id',
       header: 'SEM Origen',
-      type: 'clickable',
+      type: 'foreignKey',
+      foreignKeyData: sems,
       getDisplayValue: row => getSemDisplayValue(row.origin_sem_id),
       onCellClick: row => row.origin_sem_id && navigate(`/sem/${row.origin_sem_id}`)
     },
     {
       key: 'conservation_sem_id',
       header: 'SEM Conservación',
-      type: 'clickable',
+      type: 'foreignKey',
+      foreignKeyData: sems,
       getDisplayValue: row => getSemDisplayValue(row.conservation_sem_id),
       onCellClick: row => row.conservation_sem_id && navigate(`/sem/${row.conservation_sem_id}`)
     },
@@ -387,9 +410,17 @@ return (
         onNavigateSem={() => navigate('/sems')}
         onNavigateCatalog={() => navigate('/catalog')}
         onNavigateExvotos={() => navigate('/exvotos')}
+        onNavigateToReference={(type, id) => {
+          if (type === 'sem') {
+            navigate(`/sem/${id}`);
+          } else if (type === 'catalog') {
+            navigate(`/catalog/${id}`);
+          }
+        }}
         blockNavigation={isModalOpen}
         idField="id"
         enableKeyboardNavigation={true}
+        onRowUpdate={handleUpdate}
         className="mt-4"
       />
     </div>
