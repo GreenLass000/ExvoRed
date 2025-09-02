@@ -9,6 +9,7 @@ import Modal from '../components/Modal';
 import SearchBar from '../components/SearchBar';
 import { Sem } from '../types';
 import * as api from '../services/api';
+import { useNewShortcut } from '../hooks/useGlobalShortcut';
 
 const getInitialSemData = (): Omit<Sem, 'id'> => ({
   name: '',
@@ -52,6 +53,10 @@ const SemPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSem, setEditingSem] = useState<Sem | null>(null);
   const [newSemData, setNewSemData] = useState<Omit<Sem, 'id'>>(getInitialSemData());
+
+  // Atajo 'n' para crear nuevo SEM
+  useNewShortcut({ isModalOpen, onNew: () => handleOpenModal() });
+
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -267,6 +272,9 @@ const SemPage: React.FC = () => {
         onNavigateSem={() => navigate('/sems')}
         onNavigateCatalog={() => navigate('/catalog')}
         onNavigateExvotos={() => navigate('/exvotos')}
+        onNavigateDivinities={() => navigate('/divinities')}
+        onNavigateCharacters={() => navigate('/characters')}
+        onNavigateMiracles={() => navigate('/miracles')}
         blockNavigation={isModalOpen}
         idField="id"
         enableKeyboardNavigation={true}

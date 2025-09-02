@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { cn } from '../../lib/utils';
 import { ExcelColumnSettings } from '../../hooks/useExcelMode';
 
@@ -40,10 +40,27 @@ export const ColumnVisibilityPanel: React.FC<ColumnVisibilityPanelProps> = ({
     onToggleColumn(columnKey);
   }, [onToggleColumn]);
 
+  // Cerrar con ESC
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div className={cn(
         "bg-white dark:bg-gray-800 rounded-xl shadow-2xl",
         "w-full max-w-4xl max-h-[80vh] flex flex-col mx-4",

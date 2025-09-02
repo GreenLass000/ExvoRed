@@ -12,6 +12,7 @@ const navItems = [
     { path: '/divinities', label: 'Divinidades' },
     { path: '/characters', label: 'Personajes' },
     { path: '/miracles', label: 'Milagros' },
+    { path: '/atajos', label: 'Atajos' },
 ];
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {

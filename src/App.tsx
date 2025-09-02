@@ -12,6 +12,7 @@ const ExvotoDetailPage = lazy(() => import('./pages/ExvotoDetailPage'));
 const CharactersPage = lazy(() => import('./pages/CharactersPage'));
 const MiraclesPage = lazy(() => import('./pages/MiraclesPage'));
 const DivinitiesPage = lazy(() => import('./pages/DivinitiesPage'));
+const KeybindsPage = lazy(() => import('./pages/KeybindsPage'));
 
 const App: React.FC = () => {
     return (
@@ -30,6 +31,7 @@ const App: React.FC = () => {
                             <Route path="/characters" element={<CharactersPage />} />
 <Route path="/miracles" element={<MiraclesPage />} />
                             <Route path="/divinities" element={<DivinitiesPage />} />
+                            <Route path="/atajos" element={<KeybindsPage />} />
                         </Routes>
                     </Suspense>
                 </ErrorBoundary>

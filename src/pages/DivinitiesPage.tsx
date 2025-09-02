@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ColumnDef } from '../components/DataTable';
 import { ExcelTable } from '../components/excel';
 import Modal from '../components/Modal';
@@ -6,6 +7,7 @@ import SearchBar from '../components/SearchBar';
 import { PlusIcon } from '../components/icons';
 import * as api from '../services/api';
 import { Divinity } from '../types';
+import { useNewShortcut } from '../hooks/useGlobalShortcut';
 
 const getInitialDivinityData = (): Omit<Divinity, 'id'> => ({
   name: '',
@@ -25,6 +27,7 @@ const columns: ColumnDef<Divinity>[] = [
 ];
 
 const DivinitiesPage: React.FC = () => {
+  const navigate = useNavigate();
   const [divinities, setDivinities] = useState<Divinity[]>([]);
   const [filteredDivinities, setFilteredDivinities] = useState<Divinity[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,6 +35,9 @@ const DivinitiesPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDivinity, setEditingDivinity] = useState<Divinity | null>(null);
   const [newDivinityData, setNewDivinityData] = useState<Omit<Divinity, 'id'>>(getInitialDivinityData());
+
+  // Atajo 'n' para crear nueva divinidad
+  useNewShortcut({ isModalOpen, onNew: () => handleOpenModal() });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -48,6 +54,51 @@ const DivinitiesPage: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Navegación rápida en esta página: s/c/v/d/p/m
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      const target = e.target as HTMLElement | null;
+      const isTyping = !!target && (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable ||
+        target.getAttribute('role') === 'textbox'
+      );
+      if (isTyping) return;
+
+      switch (e.key.toLowerCase()) {
+        case 's':
+          e.preventDefault();
+          navigate('/sems');
+          break;
+        case 'c':
+          e.preventDefault();
+          navigate('/catalog');
+          break;
+        case 'v':
+          e.preventDefault();
+          navigate('/exvotos');
+          break;
+        case 'd':
+          e.preventDefault();
+          navigate('/divinities');
+          break;
+        case 'p':
+          e.preventDefault();
+          navigate('/characters');
+          break;
+        case 'm':
+          e.preventDefault();
+          navigate('/miracles');
+          break;
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [navigate]);
 
   const handleOpenModal = () => {
     setEditingDivinity(null);
@@ -222,6 +273,9 @@ const DivinitiesPage: React.FC = () => {
         onNavigateSem={() => navigate('/sems')}
         onNavigateCatalog={() => navigate('/catalog')}
         onNavigateExvotos={() => navigate('/exvotos')}
+        onNavigateDivinities={() => navigate('/divinities')}
+        onNavigateCharacters={() => navigate('/characters')}
+        onNavigateMiracles={() => navigate('/miracles')}
         blockNavigation={isModalOpen}
         idField="id"
         enableKeyboardNavigation={true}

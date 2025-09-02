@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useCallback } from 'react';
 
 interface ModalProps {
     isOpen: boolean;
@@ -8,6 +8,23 @@ interface ModalProps {
 }
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+    // Cerrar con Escape a nivel de documento (fiable aunque el foco esté en inputs)
+    const handleDocumentKeyDown = useCallback((e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            onClose();
+        }
+    }, [onClose]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        document.addEventListener('keydown', handleDocumentKeyDown);
+        return () => {
+            document.removeEventListener('keydown', handleDocumentKeyDown);
+        };
+    }, [isOpen, handleDocumentKeyDown]);
+
     if (!isOpen) return null;
 
     const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {

@@ -10,7 +10,10 @@ interface ExcelKeyboardOptions {
   onNavigateSem?: () => void; // 's'
   onNavigateCatalog?: () => void; // 'c'
   onNavigateExvotos?: () => void; // 'v'
-  blockNavigation?: boolean; // block s/c/v in new data and details
+  onNavigateDivinities?: () => void; // 'd'
+  onNavigateCharacters?: () => void; // 'p'
+  onNavigateMiracles?: () => void; // 'm'
+  blockNavigation?: boolean; // block s/c/v/d/p/m in new data and details
   inDetailsTab?: boolean; // allow E and p only when true
   // Back-compat
   onEdit?: (rowIndex: number, columnKey: string) => void;
@@ -47,7 +50,11 @@ export function useExcelKeyboard<T extends Record<string, any>>(
       target.getAttribute('role') === 'textbox'
     );
     
-    if (isInputField) return;
+    // Permitimos Ctrl+A y Shift+Espacio incluso si hay foco en input, siempre que haya una celda seleccionada
+    if (isInputField) {
+      const allowSpecial = (isCtrl && e.key.toLowerCase() === 'a') || (isShift && e.key === ' ');
+      if (!(allowSpecial && state.selectedCell)) return;
+    }
 
     const currentTime = Date.now();
     const isRepeating = currentTime - lastKeyTime.current < 50; // Throttle rapid key repeats
@@ -281,27 +288,22 @@ export function useExcelKeyboard<T extends Record<string, any>>(
         }
         break;
 
-      case 'p':
-        if (!isRepeating && !isCtrl) {
-          if (options.inDetailsTab) {
-            options.onPrint?.();
-          }
-        }
-        break;
 
       case ' ':
         if (isCtrl && !isRepeating) {
-          // Ctrl+Space: Select entire column
+          // Ctrl+Space: Select entire column (no-op for ahora)
           if (state.selectedCell) {
-            // Implementation depends on your needs
+            e.preventDefault();
+            e.stopPropagation();
           }
         } else if (isShift && !isRepeating) {
           // Shift+Space: Select entire row
           if (state.selectedCell) {
+            e.preventDefault();
+            e.stopPropagation();
             const rowData = state.filteredData[state.selectedCell.rowIndex];
             if (rowData) {
-              // Toggle row selection
-              const rowId = rowData.id || state.selectedCell.rowIndex;
+              const rowId = rowData.id ?? state.selectedCell.rowIndex;
               actions.toggleRowSelection(rowId);
             }
           }
@@ -327,6 +329,27 @@ export function useExcelKeyboard<T extends Record<string, any>>(
           e.preventDefault();
           e.stopPropagation();
           options.onNavigateExvotos?.();
+        }
+        break;
+      case 'd':
+        if (!isRepeating && !isCtrl && !options.blockNavigation) {
+          e.preventDefault();
+          e.stopPropagation();
+          options.onNavigateDivinities?.();
+        }
+        break;
+      case 'p':
+        if (!isRepeating && !isCtrl && !options.blockNavigation) {
+          e.preventDefault();
+          e.stopPropagation();
+          options.onNavigateCharacters?.();
+        }
+        break;
+      case 'm':
+        if (!isRepeating && !isCtrl && !options.blockNavigation) {
+          e.preventDefault();
+          e.stopPropagation();
+          options.onNavigateMiracles?.();
         }
         break;
 

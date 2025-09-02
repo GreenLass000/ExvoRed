@@ -1,16 +1,22 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
 import { PlusIcon, MagnifyingGlassIcon } from '../components/icons';
 import * as api from '../services/api';
 import { Miracle } from '../types';
+import { useNewShortcut } from '../hooks/useGlobalShortcut';
 
 const MiraclesPage: React.FC = () => {
+    const navigate = useNavigate();
     const [miracles, setMiracles] = useState<Miracle[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newMiracle, setNewMiracle] = useState('');
+
+    // Atajo 'n' para crear nuevo milagro
+    useNewShortcut({ isModalOpen, onNew: () => handleOpenModal() });
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -27,6 +33,51 @@ const MiraclesPage: React.FC = () => {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    // Navegación rápida en esta página: s/c/v/d/p/m
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
+            const target = e.target as HTMLElement | null;
+            const isTyping = !!target && (
+                target.tagName === 'INPUT' ||
+                target.tagName === 'TEXTAREA' ||
+                target.tagName === 'SELECT' ||
+                target.isContentEditable ||
+                target.getAttribute('role') === 'textbox'
+            );
+            if (isTyping) return;
+
+            switch (e.key.toLowerCase()) {
+                case 's':
+                    e.preventDefault();
+                    navigate('/sems');
+                    break;
+                case 'c':
+                    e.preventDefault();
+                    navigate('/catalog');
+                    break;
+                case 'v':
+                    e.preventDefault();
+                    navigate('/exvotos');
+                    break;
+                case 'd':
+                    e.preventDefault();
+                    navigate('/divinities');
+                    break;
+                case 'p':
+                    e.preventDefault();
+                    navigate('/characters');
+                    break;
+                case 'm':
+                    e.preventDefault();
+                    navigate('/miracles');
+                    break;
+            }
+        };
+        document.addEventListener('keydown', onKeyDown);
+        return () => document.removeEventListener('keydown', onKeyDown);
+    }, [navigate]);
 
     const handleOpenModal = () => {
         setNewMiracle('');

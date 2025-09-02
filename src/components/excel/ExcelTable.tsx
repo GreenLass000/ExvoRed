@@ -30,6 +30,9 @@ interface ExcelTableProps<T> {
   onNavigateSem?: () => void;
   onNavigateCatalog?: () => void;
   onNavigateExvotos?: () => void;
+  onNavigateDivinities?: () => void;
+  onNavigateCharacters?: () => void;
+  onNavigateMiracles?: () => void;
   blockNavigation?: boolean;
   inDetailsTab?: boolean;
   // Navigation for foreign key references
@@ -63,6 +66,9 @@ const ExcelTableInner = <T extends Record<string, any>>({
   onNavigateSem,
   onNavigateCatalog,
   onNavigateExvotos,
+  onNavigateDivinities,
+  onNavigateCharacters,
+  onNavigateMiracles,
   blockNavigation = false,
   inDetailsTab = false,
   onNavigateToReference,
@@ -267,6 +273,9 @@ const ExcelTableInner = <T extends Record<string, any>>({
     onNavigateSem,
     onNavigateCatalog,
     onNavigateExvotos,
+    onNavigateDivinities,
+    onNavigateCharacters,
+    onNavigateMiracles,
     blockNavigation,
     onSelectAll: () => {
       // Select all visible rows

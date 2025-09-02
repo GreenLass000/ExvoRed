@@ -14,6 +14,7 @@ import EpochSelector from '../components/EpochSelector';
 import { Exvoto, Sem, Character, Miracle } from '../types';
 import { calculateEpochFromDate } from '../utils/epochUtils';
 import * as api from '../services/api';
+import { useNewShortcut } from '../hooks/useGlobalShortcut';
 
 const getInitialExvotoData = (): Omit<Exvoto, 'id'> => ({
   internal_id: '',
@@ -54,6 +55,9 @@ const ExvotoPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExvoto, setEditingExvoto] = useState<Exvoto | null>(null);
   const [newExvotoData, setNewExvotoData] = useState<Omit<Exvoto, 'id'>>(getInitialExvotoData());
+
+  // Atajo 'n' para crear nuevo exvoto
+  useNewShortcut({ isModalOpen, onNew: () => handleOpenModal() });
   
   // Refs y estado para integración SearchBar-ExcelTable
   const excelTableRef = useRef<ExcelTableRef>(null);
@@ -403,6 +407,9 @@ return (
         onNavigateSem={() => navigate('/sems')}
         onNavigateCatalog={() => navigate('/catalog')}
         onNavigateExvotos={() => navigate('/exvotos')}
+        onNavigateDivinities={() => navigate('/divinities')}
+        onNavigateCharacters={() => navigate('/characters')}
+        onNavigateMiracles={() => navigate('/miracles')}
         onNavigateToReference={(type, id) => {
           if (type === 'sem') {
             navigate(`/sem/${id}`);
