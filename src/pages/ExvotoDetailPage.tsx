@@ -89,8 +89,8 @@ const ExvotoDetailPage: React.FC = () => {
             <div className="p-6 sm:p-8">
                 <div className="flex justify-between items-start">
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-800">{exvoto.virgin_or_saint}</h1>
-                        <p className="text-md text-slate-500 mt-1">ID Interno: {exvoto.internal_id || 'N/A'}</p>
+<h1 className="text-3xl font-bold text-slate-800">{exvoto.internal_id || 'N/A'}</h1>
+                        <p className="text-md text-slate-500 mt-1">Virgen/Santo: {exvoto.virgin_or_saint || 'N/A'}</p>
                     </div>
                      <Link to="/exvotos" className="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 transition-colors text-sm font-medium">
                         &larr; Volver a la lista
@@ -102,7 +102,8 @@ const ExvotoDetailPage: React.FC = () => {
                     <div className="space-y-6">
                         <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Detalles del Milagro</h2>
                         <dl className="space-y-4">
-                            <DetailField label="Fecha" value={formatDate(exvoto.exvoto_date)} />
+<DetailField label="Fecha" value={formatDate(exvoto.exvoto_date)} />
+                            <DetailField label="Época (25 años)" value={exvoto.epoch} />
                             <DetailField label="Milagro" value={exvoto.miracle} />
                             <DetailField label="Lugar del Milagro" value={exvoto.miracle_place} />
                             <DetailField label="Provincia" value={exvoto.province} />

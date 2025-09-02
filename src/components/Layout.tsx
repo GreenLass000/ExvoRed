@@ -9,6 +9,7 @@ const navItems = [
     { path: '/exvotos', label: 'Exvotos' },
     { path: '/sems', label: 'SEM (Lugares)' },
     { path: '/catalog', label: 'Catálogos' },
+    { path: '/divinities', label: 'Divinidades' },
     { path: '/characters', label: 'Personajes' },
     { path: '/miracles', label: 'Milagros' },
 ];

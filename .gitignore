@@ -24,15 +24,15 @@ build/
 *.local
 
 # Database files
-*.db
-*.sqlite
-*.sqlite3
-api/db/database.db
-api/db/database.db-wal
-api/db/database.db-shm
+# *.db
+# *.sqlite
+# *.sqlite3
+# api/db/database.db
+# api/db/database.db-wal
+# api/db/database.db-shm
 
 # Drizzle kit generated files
-api/db/migrations/
+# api/db/migrations/
 
 # Temporary files
 *.tmp

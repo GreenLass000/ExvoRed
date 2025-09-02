@@ -130,6 +130,32 @@ export const createMiracle = (name: string): Promise<Miracle> => {
     });
 };
 
+// --- DIVINITY API ---
+import { Divinity } from '../types';
+export const getDivinities = (): Promise<Divinity[]> => {
+    return apiCall<Divinity[]>('/divinities');
+};
+
+export const createDivinity = (payload: Partial<Divinity>): Promise<Divinity> => {
+    return apiCall<Divinity>('/divinities', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    });
+};
+
+export const updateDivinity = (id: number, data: Partial<Divinity>): Promise<Divinity> => {
+    return apiCall<Divinity>(`/divinities/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    });
+};
+
+export const deleteDivinity = (id: number): Promise<{ message: string }> => {
+    return apiCall<{ message: string }>(`/divinities/${id}`, {
+        method: 'DELETE',
+    });
+};
+
 // --- CATALOG SEM API ---
 export const getCatalogSems = (): Promise<CatalogSem[]> => {
     return apiCall<CatalogSem[]>('/catalog-sems');

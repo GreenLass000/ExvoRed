@@ -2,13 +2,17 @@
 // - Tipos ajustados para coincidir con el archivo types.ts
 // - Evita perder el foco en inputs
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DataTable, ColumnDef } from '../components/DataTable';
+import { ColumnDef } from '../components/DataTable';
+import { ExcelTable, ExcelTableRef } from '../components/excel';
 import { PlusIcon } from '../components/icons';
 import Modal from '../components/Modal';
 import TagSelect from '../components/TagSelect';
+import SearchBar from '../components/SearchBar';
+import EpochSelector from '../components/EpochSelector';
 import { Exvoto, Sem, Character, Miracle } from '../types';
+import { calculateEpochFromDate } from '../utils/epochUtils';
 import * as api from '../services/api';
 
 const getInitialExvotoData = (): Omit<Exvoto, 'id'> => ({
@@ -19,6 +23,7 @@ const getInitialExvotoData = (): Omit<Exvoto, 'id'> => ({
   province: '',
   virgin_or_saint: '',
   exvoto_date: new Date().toISOString().split('T')[0],
+  epoch: '',
   benefited_name: '',
   offerer_name: '',
   offerer_gender: '',
@@ -40,6 +45,8 @@ const getInitialExvotoData = (): Omit<Exvoto, 'id'> => ({
 
 const ExvotoPage: React.FC = () => {
   const [exvotos, setExvotos] = useState<Exvoto[]>([]);
+  const [filteredExvotos, setFilteredExvotos] = useState<Exvoto[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [sems, setSems] = useState<Sem[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [miracles, setMiracles] = useState<Miracle[]>([]);
@@ -47,6 +54,11 @@ const ExvotoPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExvoto, setEditingExvoto] = useState<Exvoto | null>(null);
   const [newExvotoData, setNewExvotoData] = useState<Omit<Exvoto, 'id'>>(getInitialExvotoData());
+  
+  // Refs y estado para integración SearchBar-ExcelTable
+  const excelTableRef = useRef<ExcelTableRef>(null);
+  const [searchResults, setSearchResults] = useState<Array<{ rowIndex: number; columnKey: string; content: string }>>([]);
+  
   const navigate = useNavigate();
 
   const fetchData = useCallback(async () => {
@@ -85,7 +97,8 @@ const ExvotoPage: React.FC = () => {
     return semNameMap[semId] || `ID inválido: ${semId}`;
   }, [semNameMap]);
 
-  const columns: ColumnDef<Exvoto>[] = useMemo(() => [
+const columns: ColumnDef<Exvoto>[] = useMemo(() => [
+    { key: 'internal_id', header: 'ID Interno' },
     {
       key: 'offering_sem_id',
       header: 'SEM Ofrenda',
@@ -94,19 +107,39 @@ const ExvotoPage: React.FC = () => {
       onCellClick: row => row.offering_sem_id && navigate(`/sem/${row.offering_sem_id}`)
     },
     {
+      key: 'origin_sem_id',
+      header: 'SEM Origen',
+      type: 'clickable',
+      getDisplayValue: row => getSemDisplayValue(row.origin_sem_id),
+      onCellClick: row => row.origin_sem_id && navigate(`/sem/${row.origin_sem_id}`)
+    },
+    {
       key: 'conservation_sem_id',
       header: 'SEM Conservación',
       type: 'clickable',
       getDisplayValue: row => getSemDisplayValue(row.conservation_sem_id),
       onCellClick: row => row.conservation_sem_id && navigate(`/sem/${row.conservation_sem_id}`)
     },
+    { key: 'province', header: 'Provincia' },
     { key: 'virgin_or_saint', header: 'Virgen/Santo' },
     { key: 'exvoto_date', header: 'Fecha Exvoto', type: 'date' },
+    { key: 'epoch', header: 'Época (25 años)' },
+    { key: 'benefited_name', header: 'Beneficiado' },
+    { key: 'offerer_name', header: 'Oferente' },
     { key: 'offerer_gender', header: 'Género Oferente' },
     { key: 'offerer_relation', header: 'Relación Oferente' },
+    { key: 'characters', header: 'Personajes' },
+    { key: 'profession', header: 'Profesión' },
+    { key: 'social_status', header: 'Estatus Social' },
     { key: 'miracle', header: 'Milagro' },
+    { key: 'miracle_place', header: 'Lugar Milagro' },
+    { key: 'material', header: 'Material' },
+    { key: 'dimensions', header: 'Dimensiones' },
+    { key: 'text_case', header: 'Uso Mayúsculas' },
     { key: 'text_form', header: 'Forma del Texto' },
-    { key: 'actions', header: 'Acciones' }
+    { key: 'conservation_status', header: 'Estado Conservación' },
+    { key: 'extra_info', header: 'Info Extra', type: 'truncated' },
+    { key: 'transcription', header: 'Transcripción', type: 'truncated' }
   ], [getSemDisplayValue, navigate]);
 
   const handleUpdate = async (id: number, data: Partial<Exvoto>) => {
@@ -146,7 +179,17 @@ const ExvotoPage: React.FC = () => {
 
   const handleFormChange = (e: React.ChangeEvent<any>) => {
     const { name, value } = e.target;
-    setNewExvotoData(prev => ({ ...prev, [name]: value === '' ? null : value }));
+    const updatedData = { ...newExvotoData, [name]: value === '' ? null : value };
+    
+    // Auto-calcular época cuando cambia la fecha
+    if (name === 'exvoto_date' && value) {
+      const calculatedEpoch = calculateEpochFromDate(value);
+      if (calculatedEpoch) {
+        updatedData.epoch = calculatedEpoch;
+      }
+    }
+    
+    setNewExvotoData(updatedData);
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -159,6 +202,40 @@ const ExvotoPage: React.FC = () => {
     handleModalClose();
     await fetchData();
   };
+
+  // Campos para la búsqueda
+  const searchFields: (keyof Exvoto)[] = [
+    'internal_id', 'province', 'virgin_or_saint', 'epoch', 
+    'benefited_name', 'offerer_name', 'offerer_gender', 
+    'offerer_relation', 'characters', 'profession', 
+    'social_status', 'miracle', 'miracle_place', 
+    'material', 'dimensions', 'text_case', 'text_form', 
+    'conservation_status', 'extra_info', 'transcription'
+  ];
+
+  // Handle de filtrado desde SearchBar
+  const handleFilteredDataChange = useCallback((filtered: Exvoto[], matchingIndexes: number[], query: string) => {
+    setFilteredExvotos(filtered);
+    setSearchQuery(query);
+  }, []);
+  
+  // Manejar consulta de búsqueda para ExcelTable
+  const handleSearchQuery = useCallback((query: string) => {
+    setSearchQuery(query);
+    // Obtener resultados del ExcelTable si está disponible
+    if (excelTableRef.current) {
+      const results = excelTableRef.current.getSearchResults();
+      setSearchResults(results);
+    }
+  }, []);
+  
+  // Manejar navegación a resultado
+  const handleNavigateToResult = useCallback((index: number) => {
+    if (searchResults[index] && excelTableRef.current) {
+      const result = searchResults[index];
+      excelTableRef.current.selectCell(result.rowIndex, result.columnKey);
+    }
+  }, [searchResults]);
 
   const renderFormField = useCallback((label: string, name: keyof typeof newExvotoData, type = 'text', options: { value: any, label: string }[] = []) => {
     const value = newExvotoData[name] ?? '';
@@ -196,6 +273,22 @@ const ExvotoPage: React.FC = () => {
         />
       );
     }
+    if (type === 'epoch') {
+      return (
+        <div key={name}>
+          <label htmlFor={name} className="block text-sm font-medium text-slate-700">{label}</label>
+          <EpochSelector
+            value={String(value ?? '')}
+            onChange={(epochValue) => {
+              const event = { target: { name, value: epochValue } } as React.ChangeEvent<any>;
+              handleFormChange(event);
+            }}
+            placeholder="Seleccionar época..."
+            className="mt-1"
+          />
+        </div>
+      );
+    }
     return (
       <div key={name}>
         <label htmlFor={name} className="block text-sm font-medium text-slate-700">{label}</label>
@@ -206,13 +299,28 @@ const ExvotoPage: React.FC = () => {
 
   if (loading) return <div className="text-center p-8">Cargando datos...</div>;
 
-  return (
+return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold text-slate-700">Gestión de Exvotos</h1>
-        <button onClick={handleOpenModal} className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          <PlusIcon className="w-5 h-5 mr-2" /> Añadir Exvoto
-        </button>
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <h1 className="text-2xl font-bold text-slate-700">Gestión de Exvotos</h1>
+          <button onClick={handleOpenModal} className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 self-start md:self-center">
+            <PlusIcon className="w-5 h-5 mr-2" /> Añadir Exvoto
+          </button>
+        </div>
+        
+        <SearchBar
+          data={exvotos}
+          searchFields={searchFields}
+          columns={columns}
+          onFilteredDataChange={handleFilteredDataChange}
+          onSearchQuery={handleSearchQuery}
+          onNavigateToResult={handleNavigateToResult}
+          excelTableRef={excelTableRef}
+          searchResults={searchResults}
+          placeholder="Buscar en exvotos (ID, provincia, beneficiado, oferente, milagro, etc.)..."
+          className="w-full"
+        />
       </div>
 
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title={editingExvoto ? 'Editar Exvoto' : 'Añadir Nuevo Exvoto'}>
@@ -225,6 +333,7 @@ const ExvotoPage: React.FC = () => {
             {renderFormField('Provincia', 'province')}
             {renderFormField('Virgen o Santo', 'virgin_or_saint')}
             {renderFormField('Fecha Exvoto', 'exvoto_date', 'date')}
+            {renderFormField('Época (25 años)', 'epoch', 'epoch')}
             {renderFormField('Nombre Beneficiado', 'benefited_name')}
             {renderFormField('Nombre Oferente', 'offerer_name')}
             {renderFormField('Género Oferente', 'offerer_gender', 'select', [
@@ -255,13 +364,33 @@ const ExvotoPage: React.FC = () => {
         </form>
       </Modal>
 
-      <DataTable<Exvoto>
-        data={exvotos}
+      <ExcelTable<Exvoto>
+        ref={excelTableRef}
+        data={filteredExvotos.length > 0 || searchQuery ? filteredExvotos : exvotos}
         columns={columns}
-        onRowUpdate={handleUpdate}
-        onRowDelete={handleDelete}
-        onRowView={handleView}
-        onRowEdit={handleEditExvoto}
+        searchQuery={searchQuery}
+        onEdit={(rowIndex, columnKey, data) => {
+          handleEditExvoto(data.id);
+        }}
+        onView={(rowIndex, columnKey, data) => {
+          handleView(data.id);
+        }}
+        onInspect={(rowIndex, columnKey, data) => {
+          console.log('Inspeccionar:', data);
+        }}
+        onPrint={() => {
+          window.print();
+        }}
+        onExport={() => {
+          console.log('Exportar datos');
+        }}
+        onNavigateSem={() => navigate('/sems')}
+        onNavigateCatalog={() => navigate('/catalog')}
+        onNavigateExvotos={() => navigate('/exvotos')}
+        blockNavigation={isModalOpen}
+        idField="id"
+        enableKeyboardNavigation={true}
+        className="mt-4"
       />
     </div>
   );

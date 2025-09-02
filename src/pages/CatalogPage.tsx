@@ -1,9 +1,11 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DataTable, ColumnDef } from '../components/DataTable';
+import { ColumnDef } from '../components/DataTable';
+import { ExcelTable } from '../components/excel';
 import { PlusIcon } from '../components/icons';
 import Modal from '../components/Modal';
+import SearchBar from '../components/SearchBar';
 import { Catalog, Sem, CatalogSem } from '../types';
 import * as api from '../services/api';
 import { calculateCatalogStatistics } from '../utils';
@@ -16,22 +18,34 @@ const getInitialCatalogData = (): Omit<Catalog, 'id'> => ({
     publication_place: '',
     catalog_location: '',
     exvoto_count: 0,
-    related_places: '',
     location_description: '',
+    oldest_exvoto_date: null,
+    newest_exvoto_date: null,
+    other_exvotos: '',
+    numero_exvotos: null,
     comments: ''
 });
 
 const columns: ColumnDef<Catalog>[] = [
     { key: 'title', header: 'Título' },
+    { key: 'reference', header: 'Referencia' },
+    { key: 'author', header: 'Autor' },
+    { key: 'publication_year', header: 'Año Publicación', type: 'number' },
+    { key: 'publication_place', header: 'Lugar Publicación' },
     { key: 'catalog_location', header: 'Ubicación del Catálogo' },
     { key: 'exvoto_count', header: 'Nº Exvotos', type: 'number' },
-    { key: 'related_places', header: 'Lugares Relacionados' },
-    { key: 'provinces', header: 'Provincias Catalogadas' },
-    { key: 'actions', header: 'Acciones' },
+    { key: 'location_description', header: 'Descripción Ubicación', type: 'truncated' },
+    { key: 'oldest_exvoto_date', header: 'Fecha Más Antigua', type: 'date' },
+    { key: 'newest_exvoto_date', header: 'Fecha Más Reciente', type: 'date' },
+    { key: 'other_exvotos', header: 'Otros Exvotos', type: 'truncated' },
+    { key: 'numero_exvotos', header: 'Nº Total Exvotos', type: 'number' },
+    { key: 'comments', header: 'Comentarios', type: 'truncated' }
 ];
 
 const CatalogPage: React.FC = () => {
     const [catalogs, setCatalogs] = useState<Catalog[]>([]);
+    const [filteredCatalogs, setFilteredCatalogs] = useState<Catalog[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
     const [catalogSems, setCatalogSems] = useState<CatalogSem[]>([]);
     const [sems, setSems] = useState<Sem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -99,8 +113,11 @@ const CatalogPage: React.FC = () => {
                 publication_place: catalog.publication_place,
                 catalog_location: catalog.catalog_location,
                 exvoto_count: catalog.exvoto_count,
-                related_places: catalog.related_places,
                 location_description: catalog.location_description,
+                oldest_exvoto_date: catalog.oldest_exvoto_date,
+                newest_exvoto_date: catalog.newest_exvoto_date,
+                other_exvotos: catalog.other_exvotos,
+                numero_exvotos: catalog.numero_exvotos,
                 comments: catalog.comments
             });
             setIsModalOpen(true);
@@ -154,6 +171,18 @@ const CatalogPage: React.FC = () => {
         navigate(`/catalog/${id}`);
     };
 
+    // Campos para la búsqueda
+    const searchFields: (keyof Catalog)[] = [
+        'title', 'reference', 'author', 'publication_place', 
+        'catalog_location', 'location_description', 'other_exvotos', 'comments'
+    ];
+
+    // Handle de filtrado desde SearchBar
+    const handleFilteredDataChange = useCallback((filtered: Catalog[], matchingIndexes: number[], query: string) => {
+        setFilteredCatalogs(filtered);
+        setSearchQuery(query);
+    }, []);
+
     const renderFormField = useCallback((label: string, name: keyof Omit<Catalog, 'id'>, type = 'text') => {
         const commonClass = "mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm";
         const value = newCatalogData[name] ?? '';
@@ -190,15 +219,26 @@ const CatalogPage: React.FC = () => {
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-4">
-                <h1 className="text-2xl font-bold text-slate-700">Gestión de Catálogos</h1>
-                <button
-                    onClick={handleOpenModal}
-                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                    <PlusIcon className="w-5 h-5 mr-2"/>
-                    Añadir Catálogo
-                </button>
+            <div className="flex flex-col gap-4 mb-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <h1 className="text-2xl font-bold text-slate-700">Gestión de Catálogos</h1>
+                    <button
+                        onClick={handleOpenModal}
+                        className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors self-start md:self-center"
+                    >
+                        <PlusIcon className="w-5 h-5 mr-2"/>
+                        Añadir Catálogo
+                    </button>
+                </div>
+                
+                <SearchBar
+                    data={catalogs}
+                    searchFields={searchFields}
+                    columns={columns}
+                    onFilteredDataChange={handleFilteredDataChange}
+                    placeholder="Buscar en catálogos (título, referencia, autor, ubicación, etc.)..."
+                    className="w-full"
+                />
             </div>
 
             <Modal isOpen={isModalOpen} onClose={handleModalClose} title={editingCatalog ? "Editar Catálogo" : "Añadir Nuevo Catálogo"}>
@@ -211,9 +251,14 @@ const CatalogPage: React.FC = () => {
                         {renderFormField('Lugar de Publicación', 'publication_place')}
                         {renderFormField('Ubicación del Catálogo', 'catalog_location')}
                         {renderFormField('Número de Exvotos', 'exvoto_count', 'number')}
-                        {renderFormField('Lugares Relacionados', 'related_places')}
+                        {renderFormField('Fecha Más Antigua', 'oldest_exvoto_date', 'date')}
+                        {renderFormField('Fecha Más Reciente', 'newest_exvoto_date', 'date')}
+                        {renderFormField('Número Total Exvotos', 'numero_exvotos', 'number')}
                         <div className="md:col-span-2">
                             {renderFormField('Descripción de Ubicación', 'location_description', 'textarea')}
+                        </div>
+                        <div className="md:col-span-2">
+                            {renderFormField('Otros Exvotos', 'other_exvotos', 'textarea')}
                         </div>
                         <div className="md:col-span-2">
                             {renderFormField('Comentarios', 'comments', 'textarea')}
@@ -226,8 +271,8 @@ const CatalogPage: React.FC = () => {
                 </form>
             </Modal>
 
-            <DataTable<Catalog> 
-                data={catalogs} 
+            <ExcelTable<Catalog> 
+                data={filteredCatalogs.length > 0 || searchQuery ? filteredCatalogs : catalogs}
                 columns={columns.map(col => {
                     if (col.key === 'provinces') {
                         return {
@@ -237,10 +282,28 @@ const CatalogPage: React.FC = () => {
                     }
                     return col;
                 })}
-                onRowUpdate={handleUpdate}
-                onRowDelete={handleDelete}
-                onRowView={handleViewDetail}
-                onRowEdit={handleEditCatalog}
+                onEdit={(rowIndex, columnKey, data) => {
+                  handleEditCatalog(data.id);
+                }}
+                onView={(rowIndex, columnKey, data) => {
+                  handleViewDetail(data.id);
+                }}
+                onInspect={(rowIndex, columnKey, data) => {
+                  console.log('Inspeccionar Catálogo:', data);
+                }}
+                onPrint={() => {
+                  window.print();
+                }}
+                onExport={() => {
+                  console.log('Exportar Catálogos');
+                }}
+                onNavigateSem={() => navigate('/sems')}
+                onNavigateCatalog={() => navigate('/catalog')}
+                onNavigateExvotos={() => navigate('/exvotos')}
+                blockNavigation={isModalOpen}
+                idField="id"
+                enableKeyboardNavigation={true}
+                className="mt-4"
             />
         </div>
     );

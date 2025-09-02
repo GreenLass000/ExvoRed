@@ -60,6 +60,7 @@ export const exvoto = sqliteTable('exvoto', {
   province: text('province', { length: 50 }),
   virgin_or_saint: text('virgin_or_saint', { length: 100 }),
   exvoto_date: text('exvoto_date'), // SQLite date as text
+  epoch: text('epoch', { length: 25 }), // Intervalo de 25 años, p.ej. "1551-1570"
   benefited_name: text('benefited_name', { length: 100 }),
   offerer_name: text('offerer_name', { length: 100 }),
   offerer_gender: text('offerer_gender', { length: 10 }),
@@ -91,12 +92,30 @@ export const catalogSem = sqliteTable('catalog_sem', {
   sem_id: integer('sem_id').notNull(),
 });
 
+// Tabla divinity (divinidades)
+export const divinity = sqliteTable('divinity', {
+  id: integer('id').primaryKey({ autoIncrement: true }).notNull(),
+  name: text('name', { length: 150 }).notNull(),
+  attributes: text('attributes'), // Atributos / Especialidad
+  history: text('history'),
+  representation: text('representation'),
+  representation_image: blob('representation_image'), // Imagen de representación
+  comments: text('comments'),
+});
+
+// Tabla intermedia divinity_sem (relación muchos-a-muchos)
+export const divinitySem = sqliteTable('divinity_sem', {
+  divinity_id: integer('divinity_id').notNull(),
+  sem_id: integer('sem_id').notNull(),
+});
+
 // Relaciones
 export const semRelations = relations(sem, ({ many }) => ({
   offering_exvotos: many(exvoto, { relationName: 'offering_sem' }),
   origin_exvotos: many(exvoto, { relationName: 'origin_sem' }),
   conservation_exvotos: many(exvoto, { relationName: 'conservation_sem' }),
   catalog_sems: many(catalogSem),
+  divinity_sems: many(divinitySem),
 }));
 
 export const exvotoRelations = relations(exvoto, ({ one, many }) => ({
@@ -145,6 +164,21 @@ export const catalogSemRelations = relations(catalogSem, ({ one }) => ({
   }),
 }));
 
+export const divinityRelations = relations(divinity, ({ many }) => ({
+  divinity_sems: many(divinitySem),
+}));
+
+export const divinitySemRelations = relations(divinitySem, ({ one }) => ({
+  divinity: one(divinity, {
+    fields: [divinitySem.divinity_id],
+    references: [divinity.id],
+  }),
+  sem: one(sem, {
+    fields: [divinitySem.sem_id],
+    references: [sem.id],
+  }),
+}));
+
 // Tipos TypeScript
 export type Miracle = typeof miracle.$inferSelect;
 export type NewMiracle = typeof miracle.$inferInsert;
@@ -160,3 +194,6 @@ export type NewCatalog = typeof catalog.$inferInsert;
 
 export type Exvoto = typeof exvoto.$inferSelect;
 export type NewExvoto = typeof exvoto.$inferInsert;
+
+export type Divinity = typeof divinity.$inferSelect;
+export type NewDivinity = typeof divinity.$inferInsert;

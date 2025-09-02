@@ -12,6 +12,7 @@ Table exvoto {
   province varchar2(50) [note: "Provincia geográfica asociada (puede ser redundante si ya está en sem)"]
   virgin_or_saint varchar2(100) [note: "Nombre de la Virgen o Santo a quien se dedica el exvoto"]
   exvoto_date date [note: "Fecha en la que ocurre el exvoto"]
+  epoch varchar2(20) [note: "Intervalo de 25 años calculado automáticamente (ej: 1551-1575)"]
   benefited_name varchar2(100) [note: "Nombre de la persona beneficiada por el milagro"]
   offerer_name varchar2(100) [note: "Nombre del oferente"]
   offerer_gender varchar2(10) [note: "Género del oferente"]
@@ -82,6 +83,32 @@ Table catalog_sem {
   
   catalog_id integer [not null]
   sem_id integer [not null]
+}
+
+Table divinities {
+  Note: "Catálogo de divinidades (Virgenes, Santos) que aparecen en los exvotos"
+
+  id integer [primary key, not null, increment]
+  name varchar2(100) [not null, note: "Nombre de la divinidad (Virgen o Santo)"]
+  attributes text [note: "Atributos o especialidades de la divinidad"]
+  history text [note: "Historia de la divinidad"]
+  representation text [note: "Descripción de cómo se representa"]
+  representation_image blob [note: "Imagen de la representación"]
+  comments text [note: "Comentarios adicionales"]
+}
+
+Table characters {
+  Note: "Catálogo de personajes representados que aparecen en los exvotos"
+
+  id integer [primary key, not null, increment]
+  name varchar2(100) [not null, unique, note: "Nombre del personaje (Virgen María, San José, etc.)"]
+}
+
+Table miracles {
+  Note: "Catálogo de tipos de milagros que aparecen en los exvotos"
+
+  id integer [primary key, not null, increment]
+  name varchar2(100) [not null, unique, note: "Tipo de milagro (Curación, Protección, etc.)"]
 }
 
 // Relationships

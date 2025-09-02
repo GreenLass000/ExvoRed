@@ -2,11 +2,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TrashIcon, EyeIcon, EditIcon } from './icons';
 import type { Sem } from '../types';
+import { highlightText } from '../utils/highlightText';
 
 export type ColumnDef<T> = {
     key: keyof T | 'actions';
     header: string;
-    type?: 'text' | 'date' | 'number' | 'foreignKey' | 'clickable';
+    type?: 'text' | 'date' | 'number' | 'foreignKey' | 'clickable' | 'truncated';
     foreignKeyData?: Sem[];
     getDisplayValue?: (row: T) => React.ReactNode;
     onCellClick?: (row: T) => void;
@@ -19,9 +20,10 @@ interface DataTableProps<T extends { id: number }> {
     onRowDelete: (id: number) => Promise<any>;
     onRowView?: (id: number) => void;
     onRowEdit?: (id: number) => void;
+    searchQuery?: string; // Nuevo parámetro para resaltar texto
 }
 
-export function DataTable<T extends { id: number }>({ data, columns, onRowUpdate, onRowDelete, onRowView, onRowEdit }: DataTableProps<T>) {
+export function DataTable<T extends { id: number }>({ data, columns, onRowUpdate, onRowDelete, onRowView, onRowEdit, searchQuery = '' }: DataTableProps<T>) {
     const [editingCell, setEditingCell] = useState<{ rowId: number; columnKey: string } | null>(null);
     const [editValue, setEditValue] = useState<any>('');
     const [status, setStatus] = useState<{ rowId: number, message: string, type: 'info' | 'error' } | null>(null);
@@ -183,12 +185,23 @@ export function DataTable<T extends { id: number }>({ data, columns, onRowUpdate
                     }}
                     className="text-slate-900 hover:text-blue-600 hover:bg-blue-50 cursor-pointer px-2 py-1 rounded transition-colors"
                 >
-                    {displayValue}
+                    {searchQuery ? highlightText(displayValue, searchQuery) : displayValue}
                 </button>
             );
         }
 
-        return displayValue;
+        // Aplicar truncado para campos largos
+        if (column.type === 'truncated') {
+            const truncatedValue = displayValue.length > 50 ? displayValue.substring(0, 50) + '...' : displayValue;
+            return (
+                <span title={displayValue}>
+                    {searchQuery ? highlightText(truncatedValue, searchQuery) : truncatedValue}
+                </span>
+            );
+        }
+
+        // Aplicar resaltado de texto para búsquedas
+        return searchQuery ? highlightText(displayValue, searchQuery) : displayValue;
     };
 
     return (

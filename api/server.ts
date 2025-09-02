@@ -19,6 +19,8 @@ app.use('/api/exvotos', exvotoRoutes);
 app.use('/api/sems', semRoutes);
 app.use('/api/catalogs', catalogRoutes);
 app.use('/api/catalog-sems', catalogSemRoutes);
+import divinityRoutes from './routes/divinityRoutes.js';
+app.use('/api/divinities', divinityRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

@@ -1,10 +1,12 @@
 // Página SEM corregida: evita uso incorrecto de hooks y estabiliza renderizado
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DataTable, ColumnDef } from '../components/DataTable';
+import { ColumnDef } from '../components/DataTable';
+import { ExcelTable } from '../components/excel';
 import { PlusIcon } from '../components/icons';
 import Modal from '../components/Modal';
+import SearchBar from '../components/SearchBar';
 import { Sem } from '../types';
 import * as api from '../services/api';
 
@@ -19,6 +21,7 @@ const getInitialSemData = (): Omit<Sem, 'id'> => ({
   oldest_exvoto_date: null,
   newest_exvoto_date: null,
   other_exvotos: '',
+  numero_exvotos: null,
   comments: '',
   references: '',
   contact: ''
@@ -26,16 +29,25 @@ const getInitialSemData = (): Omit<Sem, 'id'> => ({
 
 const columns: ColumnDef<Sem>[] = [
   { key: 'name', header: 'Nombre' },
+  { key: 'region', header: 'Región' },
   { key: 'province', header: 'Provincia' },
+  { key: 'town', header: 'Población' },
   { key: 'associated_divinity', header: 'Divinidad Asociada' },
-  { key: 'pictorial_exvoto_count', header: 'Nº Exvotos', type: 'number' },
+  { key: 'festivity', header: 'Festividad' },
+  { key: 'pictorial_exvoto_count', header: 'Nº Exvotos Pictóricos', type: 'number' },
   { key: 'oldest_exvoto_date', header: 'Fecha más antigua', type: 'date' },
   { key: 'newest_exvoto_date', header: 'Fecha más reciente', type: 'date' },
-  { key: 'actions', header: 'Acciones' }
+  { key: 'other_exvotos', header: 'Otros Exvotos', type: 'truncated' },
+  { key: 'numero_exvotos', header: 'Nº Total Exvotos', type: 'number' },
+  { key: 'contact', header: 'Contacto' },
+  { key: 'comments', header: 'Comentarios', type: 'truncated' },
+  { key: 'references', header: 'Referencias', type: 'truncated' }
 ];
 
 const SemPage: React.FC = () => {
   const [sems, setSems] = useState<Sem[]>([]);
+  const [filteredSems, setFilteredSems] = useState<Sem[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSem, setEditingSem] = useState<Sem | null>(null);
@@ -111,6 +123,18 @@ const SemPage: React.FC = () => {
     navigate(`/sem/${id}`);
   };
 
+  // Campos para la búsqueda
+  const searchFields: (keyof Sem)[] = [
+    'name', 'region', 'province', 'town', 'associated_divinity', 
+    'festivity', 'other_exvotos', 'comments', 'references', 'contact'
+  ];
+
+  // Handle de filtrado desde SearchBar
+  const handleFilteredDataChange = useCallback((filtered: Sem[], matchingIndexes: number[], query: string) => {
+    setFilteredSems(filtered);
+    setSearchQuery(query);
+  }, []);
+
   const renderFormField = (
     label: string,
     name: keyof Omit<Sem, 'id'>,
@@ -151,14 +175,25 @@ const SemPage: React.FC = () => {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold text-slate-700">Gestión de SEM (Santuarios, Ermitas, Museos)</h1>
-        <button
-          onClick={handleOpenModal}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <PlusIcon className="w-5 h-5 mr-2" /> Añadir SEM
-        </button>
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <h1 className="text-2xl font-bold text-slate-700">Gestión de SEM (Santuarios, Ermitas, Museos)</h1>
+          <button
+            onClick={handleOpenModal}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors self-start md:self-center"
+          >
+            <PlusIcon className="w-5 h-5 mr-2" /> Añadir SEM
+          </button>
+        </div>
+        
+        <SearchBar
+          data={sems}
+          searchFields={searchFields}
+          columns={columns}
+          onFilteredDataChange={handleFilteredDataChange}
+          placeholder="Buscar en SEMs (nombre, región, provincia, población, etc.)..."
+          className="w-full"
+        />
       </div>
 
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title={editingSem ? "Editar SEM" : "Añadir Nuevo SEM"}>
@@ -191,13 +226,31 @@ const SemPage: React.FC = () => {
         </form>
       </Modal>
 
-      <DataTable<Sem>
-        data={sems}
+      <ExcelTable<Sem>
+        data={filteredSems.length > 0 || searchQuery ? filteredSems : sems}
         columns={columns}
-        onRowUpdate={handleUpdate}
-        onRowDelete={handleDelete}
-        onRowView={handleViewDetail}
-        onRowEdit={handleEditSem}
+        onEdit={(rowIndex, columnKey, data) => {
+          handleEditSem(data.id);
+        }}
+        onView={(rowIndex, columnKey, data) => {
+          handleViewDetail(data.id);
+        }}
+        onInspect={(rowIndex, columnKey, data) => {
+          console.log('Inspeccionar SEM:', data);
+        }}
+        onPrint={() => {
+          window.print();
+        }}
+        onExport={() => {
+          console.log('Exportar SEMs');
+        }}
+        onNavigateSem={() => navigate('/sems')}
+        onNavigateCatalog={() => navigate('/catalog')}
+        onNavigateExvotos={() => navigate('/exvotos')}
+        blockNavigation={isModalOpen}
+        idField="id"
+        enableKeyboardNavigation={true}
+        className="mt-4"
       />
     </div>
   );

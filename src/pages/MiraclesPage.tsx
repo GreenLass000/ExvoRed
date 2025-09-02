@@ -1,12 +1,13 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Modal from '../components/Modal';
-import { PlusIcon } from '../components/icons';
+import { PlusIcon, MagnifyingGlassIcon } from '../components/icons';
 import * as api from '../services/api';
 import { Miracle } from '../types';
 
 const MiraclesPage: React.FC = () => {
     const [miracles, setMiracles] = useState<Miracle[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newMiracle, setNewMiracle] = useState('');
@@ -50,21 +51,56 @@ const MiraclesPage: React.FC = () => {
         }
     };
 
+    // Función para normalizar texto
+    const normalizeText = (text: string): string => {
+        return text
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, ''); // Remover acentos
+    };
+
+    // Filtrar milagros basado en la búsqueda
+    const filteredMiracles = useMemo(() => {
+        if (!searchQuery.trim()) {
+            return miracles;
+        }
+
+        const normalizedQuery = normalizeText(searchQuery);
+        return miracles.filter(miracle => 
+            normalizeText(miracle.name).includes(normalizedQuery)
+        );
+    }, [miracles, searchQuery]);
+
     if (loading) {
         return <div className="text-center p-8">Cargando datos...</div>;
     }
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-4">
-                <h1 className="text-2xl font-bold text-slate-700">Tipos de Milagros (Únicos)</h1>
-                <button
-                    onClick={handleOpenModal}
-                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                    <PlusIcon className="w-5 h-5 mr-2"/>
-                    Añadir Milagro
-                </button>
+            <div className="flex flex-col gap-4 mb-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <h1 className="text-2xl font-bold text-slate-700">Tipos de Milagros (Únicos)</h1>
+                    <button
+                        onClick={handleOpenModal}
+                        className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors self-start md:self-center"
+                    >
+                        <PlusIcon className="w-5 h-5 mr-2"/>
+                        Añadir Milagro
+                    </button>
+                </div>
+                
+                <div className="relative max-w-md">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Buscar milagros..."
+                        className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    />
+                </div>
             </div>
 
             <Modal isOpen={isModalOpen} onClose={handleModalClose} title="Añadir Nuevo Milagro">
@@ -102,14 +138,21 @@ const MiraclesPage: React.FC = () => {
             </Modal>
 
             <div className="bg-white rounded-lg shadow p-6">
-                {miracles.length > 0 ? (
+                {searchQuery && (
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-blue-800">
+                            Mostrando {filteredMiracles.length} de {miracles.length} milagros para "{searchQuery}"
+                        </p>
+                    </div>
+                )}
+                {filteredMiracles.length > 0 ? (
                     <ul className="list-disc list-inside space-y-2">
-                        {miracles.map((miracle) => (
+                        {filteredMiracles.map((miracle) => (
                             <li key={miracle.id} className="text-slate-800">{miracle.name}</li>
                         ))}
                     </ul>
                 ) : (
-                    <p>No se encontraron datos de milagros.</p>
+                    <p>{searchQuery ? `No se encontraron milagros que coincidan con "${searchQuery}"` : 'No se encontraron datos de milagros.'}</p>
                 )}
             </div>
         </div>

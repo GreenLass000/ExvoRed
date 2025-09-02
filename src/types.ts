@@ -11,6 +11,7 @@ export interface Sem {
     oldest_exvoto_date: string | null;
     newest_exvoto_date: string | null;
     other_exvotos: string | null;
+    numero_exvotos: number | null;
     comments: string | null;
     references: string | null;
     contact: string | null;
@@ -25,8 +26,11 @@ export interface Catalog {
     publication_place: string | null;
     catalog_location: string | null;
     exvoto_count: number | null;
-    related_places: string | null;
     location_description: string | null;
+    oldest_exvoto_date: string | null;
+    newest_exvoto_date: string | null;
+    other_exvotos: string | null;
+    numero_exvotos: number | null;
     comments: string | null;
 }
 
@@ -39,6 +43,7 @@ export interface Exvoto {
     province: string | null;
     virgin_or_saint: string | null;
     exvoto_date: string | null;
+    epoch: string | null;
     benefited_name: string | null;
     offerer_name: string | null;
     offerer_gender: string | null;
@@ -56,6 +61,16 @@ export interface Exvoto {
     transcription: string | null;
     conservation_status: string | null;
     image: string | null; // Using string to represent blob data placeholder
+}
+
+export interface Divinity {
+    id: number;
+    name: string;
+    attributes: string | null;
+    history: string | null;
+    representation: string | null;
+    representation_image: string | null; // Using string to represent blob data placeholder
+    comments: string | null;
 }
 
 export interface Character {
