@@ -27,12 +27,15 @@ build/
 # *.db
 # *.sqlite
 # *.sqlite3
-# api/db/database.db
-# api/db/database.db-wal
-# api/db/database.db-shm
+api/db/database.db
+api/db/database.db-wal
+api/db/database.db-shm
 
-# Drizzle kit generated files
-# api/db/migrations/
+Drizzle kit generated files
+api/db/migrations/
+api/db/backups
+
+backups/
 
 # Temporary files
 *.tmp
