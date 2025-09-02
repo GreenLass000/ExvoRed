@@ -15,6 +15,7 @@ export interface Sem {
     comments: string | null;
     references: string | null;
     contact: string | null;
+    updated_at?: string | null;
 }
 
 export interface Catalog {
@@ -32,13 +33,14 @@ export interface Catalog {
     other_exvotos: string | null;
     numero_exvotos: number | null;
     comments: string | null;
+    updated_at?: string | null;
 }
 
 export interface Exvoto {
     id: number;
     internal_id: string | null;
     offering_sem_id: number | null;
-    origin_sem_id: number | null;
+    lugar_origen: string | null;
     conservation_sem_id: number | null;
     province: string | null;
     virgin_or_saint: string | null;
@@ -61,6 +63,7 @@ export interface Exvoto {
     transcription: string | null;
     conservation_status: string | null;
     image: string | null; // Using string to represent blob data placeholder
+    updated_at?: string | null;
 }
 
 export interface Divinity {
@@ -71,16 +74,19 @@ export interface Divinity {
     representation: string | null;
     representation_image: string | null; // Using string to represent blob data placeholder
     comments: string | null;
+    updated_at?: string | null;
 }
 
 export interface Character {
     id: number;
     name: string;
+    updated_at?: string | null;
 }
 
 export interface Miracle {
     id: number;
     name: string;
+    updated_at?: string | null;
 }
 
 export interface CatalogSem {

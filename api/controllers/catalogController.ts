@@ -36,8 +36,8 @@ export const catalogController = {
   async create(req: Request, res: Response) {
     try {
       const catalogData = req.body as NewCatalog;
-      
-      const result = await db.insert(catalog).values(catalogData).returning();
+      const now = new Date().toISOString();
+      const result = await db.insert(catalog).values({ ...catalogData, updated_at: now } as any).returning();
       res.status(201).json(result[0]);
     } catch (error) {
       console.error('Error creating catalog:', error);
@@ -50,9 +50,10 @@ export const catalogController = {
     try {
       const id = parseInt(req.params.id);
       const catalogData = req.body as Partial<NewCatalog>;
+      const now = new Date().toISOString();
 
       const result = await db.update(catalog)
-        .set(catalogData)
+        .set({ ...catalogData, updated_at: now } as any)
         .where(eq(catalog.id, id))
         .returning();
       

@@ -133,6 +133,22 @@ export function useExcelMode<T extends Record<string, any>>(
       .sort((a, b) => a.order - b.order);
   }, [columns]);
 
+  // Default sort (alphabetical) on first suitable text-like column
+  useEffect(() => {
+    if (!sortColumn && !sortDirection && Array.isArray(initialColumns) && initialColumns.length > 0) {
+      const preferred = initialColumns.find(c => c && c.key !== 'actions' && c.type !== 'number' && c.type !== 'date');
+      const fallback = initialColumns.find(c => c && c.key !== 'actions');
+      if (!preferred && !fallback) return;
+      const defaultKey = String((preferred || fallback)!.key);
+      setSortColumn(defaultKey);
+      setSortDirection('asc');
+      setColumns(prev => (Array.isArray(prev) ? prev : []).map(col => ({
+        ...col,
+        sortDirection: col.key === defaultKey ? 'asc' : null
+      })));
+    }
+  }, [initialColumns, sortColumn, sortDirection]);
+
   const filteredData = useMemo(() => {
     if (filters.length === 0) return data;
     
@@ -186,30 +202,65 @@ export function useExcelMode<T extends Record<string, any>>(
 
   const sortedData = useMemo(() => {
     if (!sortColumn || !sortDirection) return filteredData;
-    
-    return [...filteredData].sort((a, b) => {
-      const aValue = a[sortColumn as keyof T];
-      const bValue = b[sortColumn as keyof T];
-      
-      if (aValue == null && bValue == null) return 0;
-      if (aValue == null) return 1;
-      if (bValue == null) return -1;
-      
-      let result = 0;
-      
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        result = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
-      } else if (typeof aValue === 'number' && typeof bValue === 'number') {
-        result = aValue - bValue;
-      } else if (aValue instanceof Date && bValue instanceof Date) {
-        result = aValue.getTime() - bValue.getTime();
-      } else {
-        result = String(aValue).localeCompare(String(bValue));
+
+    // Helpers for sorting by display text when available
+    const normalizeText = (text: string): string =>
+      text
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    const extractTextFromReactNode = (node: any): string => {
+      if (typeof node === 'string') return node;
+      if (typeof node === 'number') return String(node);
+      if (node == null) return '';
+      // React element basic extraction
+      const maybeChildren = (node && node.props && node.props.children) ?? null;
+      if (typeof maybeChildren === 'string') return maybeChildren;
+      if (typeof maybeChildren === 'number') return String(maybeChildren);
+      return String(node);
+    };
+
+    const colDef = initialColumns.find(col => String(col.key) === sortColumn);
+
+    const getComparable = (item: T) => {
+      // Prefer display value when a renderer is provided (e.g., foreign keys)
+      if (colDef && typeof colDef.getDisplayValue === 'function') {
+        try {
+          const display = colDef.getDisplayValue(item);
+          return normalizeText(extractTextFromReactNode(display));
+        } catch {
+          // fallback to raw value
+        }
       }
-      
+      const raw = item[sortColumn as keyof T] as unknown as any;
+      if (raw == null) return null;
+      return raw;
+    };
+
+    return [...filteredData].sort((a, b) => {
+      const aComp = getComparable(a);
+      const bComp = getComparable(b);
+
+      if (aComp == null && bComp == null) return 0;
+      if (aComp == null) return 1;
+      if (bComp == null) return -1;
+
+      let result = 0;
+
+      if (typeof aComp === 'string' || typeof bComp === 'string') {
+        result = String(aComp).localeCompare(String(bComp), undefined, { sensitivity: 'base' });
+      } else if (typeof aComp === 'number' && typeof bComp === 'number') {
+        result = aComp - bComp;
+      } else if (aComp instanceof Date && bComp instanceof Date) {
+        result = aComp.getTime() - bComp.getTime();
+      } else {
+        result = String(aComp).localeCompare(String(bComp));
+      }
+
       return sortDirection === 'asc' ? result : -result;
     });
-  }, [filteredData, sortColumn, sortDirection]);
+  }, [filteredData, sortColumn, sortDirection, initialColumns]);
 
   // Actions
   const actions: ExcelModeActions<T> = {

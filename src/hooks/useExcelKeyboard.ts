@@ -63,7 +63,7 @@ export function useExcelKeyboard<T extends Record<string, any>>(
     const shouldPreventDefault = [
       'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
       'Tab', 'Enter', 'Home', 'End', 'PageUp', 'PageDown'
-    ].includes(e.key) || (isCtrl && ['a', 'c', 'v', 'x', 'z', 'y'].includes(e.key.toLowerCase()));
+    ].includes(e.key) || (isCtrl && ['a', 'c', 'v', 'x', 'z', 'y', 'f'].includes(e.key.toLowerCase()));
 
     if (shouldPreventDefault && !isRepeating) {
       e.preventDefault();
@@ -210,6 +210,9 @@ export function useExcelKeyboard<T extends Record<string, any>>(
 
       case 'e':
         if (!isRepeating && state.selectedCell && !isCtrl) {
+          // Prevent the typed 'e' from being inserted into the newly focused input
+          e.preventDefault();
+          e.stopPropagation();
           // Edit current cell (expand/edit modal)
           if (options.onEditCell) {
             options.onEditCell(state.selectedCell.rowIndex, state.selectedCell.columnKey);
@@ -228,6 +231,8 @@ export function useExcelKeyboard<T extends Record<string, any>>(
 
       case 'E':
         if (!isRepeating && state.selectedCell && !isCtrl) {
+          e.preventDefault();
+          e.stopPropagation();
           if (options.inDetailsTab) {
             options.onEditRecord?.(state.selectedCell.rowIndex);
           }
@@ -236,6 +241,9 @@ export function useExcelKeyboard<T extends Record<string, any>>(
 
       case 'i':
         if (!isRepeating && state.selectedCell && !isCtrl) {
+          // Prevent default so the typed 'i' doesn't leak into inputs
+          e.preventDefault();
+          e.stopPropagation();
           const rowData = state.filteredData[state.selectedCell.rowIndex];
           const columnKey = state.selectedCell.columnKey;
           
@@ -302,16 +310,22 @@ export function useExcelKeyboard<T extends Record<string, any>>(
 
       case 's':
         if (!isRepeating && !isCtrl && !options.blockNavigation) {
+          e.preventDefault();
+          e.stopPropagation();
           options.onNavigateSem?.();
         }
         break;
       case 'c':
         if (!isRepeating && !isCtrl && !options.blockNavigation) {
+          e.preventDefault();
+          e.stopPropagation();
           options.onNavigateCatalog?.();
         }
         break;
       case 'v':
         if (!isRepeating && !isCtrl && !options.blockNavigation) {
+          e.preventDefault();
+          e.stopPropagation();
           options.onNavigateExvotos?.();
         }
         break;

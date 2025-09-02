@@ -36,8 +36,8 @@ export const semController = {
   async create(req: Request, res: Response) {
     try {
       const semData = req.body as NewSem;
-      
-      const result = await db.insert(sem).values(semData).returning();
+      const now = new Date().toISOString();
+      const result = await db.insert(sem).values({ ...semData, updated_at: now } as any).returning();
       res.status(201).json(result[0]);
     } catch (error) {
       console.error('Error creating sem:', error);
@@ -50,9 +50,10 @@ export const semController = {
     try {
       const id = parseInt(req.params.id);
       const semData = req.body as Partial<NewSem>;
+      const now = new Date().toISOString();
 
       const result = await db.update(sem)
-        .set(semData)
+        .set({ ...semData, updated_at: now } as any)
         .where(eq(sem.id, id))
         .returning();
       

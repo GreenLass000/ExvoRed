@@ -41,7 +41,8 @@ export const characterController = {
         return res.status(400).json({ error: 'Name is required' });
       }
 
-      const result = await db.insert(character).values({ name }).returning();
+      const now = new Date().toISOString();
+      const result = await db.insert(character).values({ name, updated_at: now } as any).returning();
       res.status(201).json(result[0]);
     } catch (error) {
       console.error('Error creating character:', error);
@@ -59,8 +60,9 @@ export const characterController = {
         return res.status(400).json({ error: 'Name is required' });
       }
 
+      const now = new Date().toISOString();
       const result = await db.update(character)
-        .set({ name })
+        .set({ name, updated_at: now } as any)
         .where(eq(character.id, id))
         .returning();
       

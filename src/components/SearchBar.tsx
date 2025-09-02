@@ -143,19 +143,7 @@ function SearchBar<T extends Record<string, any>>({
       };
     }
 
-    // Si tenemos resultados de ExcelTable, usarlos
-    if (searchResults.length > 0) {
-      // Crear un set de IDs únicos de filas que tienen coincidencias
-      const uniqueRowIndexes = [...new Set(searchResults.map(r => r.rowIndex))];
-      const filtered = uniqueRowIndexes.map(rowIndex => data[rowIndex]).filter(Boolean);
-      
-      return {
-        filteredData: filtered,
-        totalMatches: searchResults.length
-      };
-    }
-
-    // Fallback a lógica local si no hay resultados de ExcelTable
+    // Filtrado local estable (evita bucles con ExcelTable)
     const filtered: T[] = [];
     let matches = 0;
 
@@ -171,7 +159,7 @@ function SearchBar<T extends Record<string, any>>({
       filteredData: filtered, 
       totalMatches: matches
     };
-  }, [data, searchQuery, searchFields, columns, countAllMatches, searchResults]);
+  }, [data, searchQuery, countAllMatches]);
 
   // Resetear índice cuando cambia la búsqueda
   useEffect(() => {
@@ -228,7 +216,8 @@ function SearchBar<T extends Record<string, any>>({
     setCurrentMatchIndex(0);
   };
 
-  const hasResults = totalMatches > 0;
+  const effectiveTotalMatches = searchResults.length > 0 ? searchResults.length : totalMatches;
+  const hasResults = effectiveTotalMatches > 0;
   const hasQuery = searchQuery.trim().length > 0;
 
   return (
@@ -258,10 +247,10 @@ function SearchBar<T extends Record<string, any>>({
 
       {/* Contador y navegación de resultados */}
       {hasQuery && (
-        <div className="ml-3 flex items-center space-x-2 bg-gray-50 px-3 py-2 rounded-lg border">
+        <div className="ml-3 flex items-center space-x-2 bg-gray-50 px-2 py-1 md:px-3 md:py-2 rounded-lg border flex-shrink-0 whitespace-nowrap overflow-hidden">
           <span className="text-sm font-medium text-gray-700">
             {hasResults 
-              ? `${currentMatchIndex + 1} de ${totalMatches}` 
+              ? `${currentMatchIndex + 1} de ${effectiveTotalMatches}` 
               : 'Sin resultados'}
           </span>
           

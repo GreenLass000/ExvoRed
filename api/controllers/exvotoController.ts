@@ -36,8 +36,8 @@ export const exvotoController = {
   async create(req: Request, res: Response) {
     try {
       const exvotoData = req.body as NewExvoto;
-      
-      const result = await db.insert(exvoto).values(exvotoData).returning();
+      const now = new Date().toISOString();
+      const result = await db.insert(exvoto).values({ ...exvotoData, updated_at: now } as any).returning();
       res.status(201).json(result[0]);
     } catch (error) {
       console.error('Error creating exvoto:', error);
@@ -50,9 +50,10 @@ export const exvotoController = {
     try {
       const id = parseInt(req.params.id);
       const exvotoData = req.body as Partial<NewExvoto>;
+      const now = new Date().toISOString();
 
       const result = await db.update(exvoto)
-        .set(exvotoData)
+        .set({ ...exvotoData, updated_at: now } as any)
         .where(eq(exvoto.id, id))
         .returning();
       

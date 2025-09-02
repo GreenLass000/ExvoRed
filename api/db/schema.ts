@@ -5,12 +5,14 @@ import { relations } from 'drizzle-orm';
 export const miracle = sqliteTable('miracle', {
   id: integer('id').primaryKey({ autoIncrement: true }).notNull(),
   name: text('name').notNull(),
+updated_at: text('updated_at'),
 });
 
 // Tabla character
 export const character = sqliteTable('character', {
   id: integer('id').primaryKey({ autoIncrement: true }).notNull(),
   name: text('name').notNull(),
+updated_at: text('updated_at'),
 });
 
 // Tabla sem (santuario/ermita/museo)
@@ -30,6 +32,7 @@ export const sem = sqliteTable('sem', {
   comments: text('comments'),
   references: text('references'),
   contact: text('contact'),
+updated_at: text('updated_at'),
 });
 
 // Tabla catalog
@@ -48,6 +51,7 @@ export const catalog = sqliteTable('catalog', {
   other_exvotos: text('other_exvotos'),
   numero_exvotos: integer('numero_exvotos'),
   comments: text('comments'),
+updated_at: text('updated_at'),
 });
 
 // Tabla exvoto (principal)
@@ -55,7 +59,7 @@ export const exvoto = sqliteTable('exvoto', {
   id: integer('id').primaryKey({ autoIncrement: true }).notNull(),
   internal_id: text('internal_id', { length: 20 }),
   offering_sem_id: integer('offering_sem_id'),
-  origin_sem_id: integer('origin_sem_id'),
+  lugar_origen: text('lugar_origen', { length: 200 }),
   conservation_sem_id: integer('conservation_sem_id'),
   province: text('province', { length: 50 }),
   virgin_or_saint: text('virgin_or_saint', { length: 100 }),
@@ -78,6 +82,7 @@ export const exvoto = sqliteTable('exvoto', {
   transcription: text('transcription'),
   conservation_status: text('conservation_status', { length: 100 }),
   image: blob('image'),
+updated_at: text('updated_at'),
 });
 
 // Tabla intermedia catalog_exvoto
@@ -101,6 +106,7 @@ export const divinity = sqliteTable('divinity', {
   representation: text('representation'),
   representation_image: blob('representation_image'), // Imagen de representación
   comments: text('comments'),
+updated_at: text('updated_at'),
 });
 
 // Tabla intermedia divinity_sem (relación muchos-a-muchos)
@@ -112,7 +118,6 @@ export const divinitySem = sqliteTable('divinity_sem', {
 // Relaciones
 export const semRelations = relations(sem, ({ many }) => ({
   offering_exvotos: many(exvoto, { relationName: 'offering_sem' }),
-  origin_exvotos: many(exvoto, { relationName: 'origin_sem' }),
   conservation_exvotos: many(exvoto, { relationName: 'conservation_sem' }),
   catalog_sems: many(catalogSem),
   divinity_sems: many(divinitySem),
@@ -123,11 +128,6 @@ export const exvotoRelations = relations(exvoto, ({ one, many }) => ({
     fields: [exvoto.offering_sem_id],
     references: [sem.id],
     relationName: 'offering_sem',
-  }),
-  origin_sem: one(sem, {
-    fields: [exvoto.origin_sem_id],
-    references: [sem.id],
-    relationName: 'origin_sem',
   }),
   conservation_sem: one(sem, {
     fields: [exvoto.conservation_sem_id],

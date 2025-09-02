@@ -45,13 +45,15 @@ export const divinityController = {
         return res.status(400).json({ error: 'Name is required' });
       }
 
+      const now = new Date().toISOString();
       const result = await db.insert(divinity).values({
         name: payload.name,
         attributes: payload.attributes ?? null,
         history: payload.history ?? null,
         representation: payload.representation ?? null,
         comments: payload.comments ?? null,
-      }).returning();
+        updated_at: now,
+      } as any).returning();
       res.status(201).json(result[0]);
     } catch (error) {
       console.error('Error creating divinity:', error);
@@ -71,6 +73,7 @@ export const divinityController = {
         comments?: string | null;
       }>;
 
+      const now = new Date().toISOString();
       const result = await db.update(divinity)
         .set({
           name: payload.name,
@@ -78,7 +81,8 @@ export const divinityController = {
           history: payload.history,
           representation: payload.representation,
           comments: payload.comments,
-        })
+          updated_at: now,
+        } as any)
         .where(eq(divinity.id, id))
         .returning();
 

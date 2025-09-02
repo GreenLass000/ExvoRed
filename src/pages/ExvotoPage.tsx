@@ -18,7 +18,7 @@ import * as api from '../services/api';
 const getInitialExvotoData = (): Omit<Exvoto, 'id'> => ({
   internal_id: '',
   offering_sem_id: null,
-  origin_sem_id: null,
+  lugar_origen: '',
   conservation_sem_id: null,
   province: '',
   virgin_or_saint: '',
@@ -127,14 +127,7 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
       getDisplayValue: row => getSemDisplayValue(row.offering_sem_id),
       onCellClick: row => row.offering_sem_id && navigate(`/sem/${row.offering_sem_id}`)
     },
-    {
-      key: 'origin_sem_id',
-      header: 'SEM Origen',
-      type: 'foreignKey',
-      foreignKeyData: sems,
-      getDisplayValue: row => getSemDisplayValue(row.origin_sem_id),
-      onCellClick: row => row.origin_sem_id && navigate(`/sem/${row.origin_sem_id}`)
-    },
+    { key: 'lugar_origen', header: 'Lugar de Origen' },
     {
       key: 'conservation_sem_id',
       header: 'SEM Conservación',
@@ -228,7 +221,7 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
 
   // Campos para la búsqueda
   const searchFields: (keyof Exvoto)[] = [
-    'internal_id', 'province', 'virgin_or_saint', 'epoch', 
+    'internal_id', 'lugar_origen', 'province', 'virgin_or_saint', 'epoch', 
     'benefited_name', 'offerer_name', 'offerer_gender', 
     'offerer_relation', 'characters', 'profession', 
     'social_status', 'miracle', 'miracle_place', 
@@ -351,7 +344,7 @@ return (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {renderFormField('ID Interno', 'internal_id')}
             {renderFormField('SEM Ofrenda', 'offering_sem_id', 'select', sems.map(s => ({ value: s.id, label: s.name || `SEM #${s.id}` })))}
-            {renderFormField('SEM Origen', 'origin_sem_id', 'select', sems.map(s => ({ value: s.id, label: s.name || `SEM #${s.id}` })))}
+            {renderFormField('Lugar de Origen', 'lugar_origen')}
             {renderFormField('SEM Conservación', 'conservation_sem_id', 'select', sems.map(s => ({ value: s.id, label: s.name || `SEM #${s.id}` })))}
             {renderFormField('Provincia', 'province')}
             {renderFormField('Virgen o Santo', 'virgin_or_saint')}

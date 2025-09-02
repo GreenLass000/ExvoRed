@@ -8,6 +8,7 @@ interface ColumnHeaderProps {
   sortDirection: 'asc' | 'desc' | null;
   hasFilter: boolean;
   onSort: (direction?: 'asc' | 'desc') => void;
+  onSortByColumn: (columnKey: string, direction: 'asc' | 'desc') => void;
   onAddFilter: (filter: ExcelFilter) => void;
   onRemoveFilter: () => void;
   className?: string;
@@ -22,6 +23,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
   sortDirection,
   hasFilter,
   onSort,
+  onSortByColumn,
   onAddFilter,
   onRemoveFilter,
   className = '',
@@ -32,6 +34,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [filterValue, setFilterValue] = useState('');
   const [filterOperator, setFilterOperator] = useState<'equals' | 'contains' | 'starts_with' | 'gt' | 'lt'>('contains');
+  const [selectedSort, setSelectedSort] = useState<'asc' | 'desc' | ''>('');
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -47,6 +50,11 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Sync selectedSort with incoming sortDirection
+  useEffect(() => {
+    setSelectedSort(sortDirection ?? '');
+  }, [sortDirection]);
 
   const handleSort = useCallback(() => {
     if (locked) return;
@@ -101,44 +109,14 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
     }
   };
 
-  const getSortOptions = () => {
-    const baseOptions = [
-      { value: 'asc', label: 'A-Z' },
-      { value: 'desc', label: 'Z-A' }
-    ];
-
+  const getSortLabels = () => {
     if (columnType === 'number') {
-      return [
-        { value: 'desc', label: 'Mayor a menor' },
-        { value: 'asc', label: 'Menor a mayor' },
-        ...baseOptions
-      ];
+      return { asc: 'Menor a mayor', desc: 'Mayor a menor' } as const;
     }
-
     if (columnType === 'date') {
-      return [
-        { value: 'desc', label: 'Más reciente' },
-        { value: 'asc', label: 'Más antiguo' },
-        ...baseOptions
-      ];
+      return { asc: 'Más antiguo', desc: 'Más reciente' } as const;
     }
-
-    // Special filters for provinces and epochs
-    if (columnKey === 'province') {
-      return [
-        ...baseOptions,
-        { value: 'province_filter', label: 'Filtrar por provincia' }
-      ];
-    }
-
-    if (columnKey === 'epoch') {
-      return [
-        ...baseOptions,
-        { value: 'epoch_filter', label: 'Filtrar por épocas' }
-      ];
-    }
-
-    return baseOptions;
+    return { asc: 'A-Z', desc: 'Z-A' } as const;
   };
 
   const renderFilterInput = () => {
@@ -258,7 +236,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
       {showFilterMenu && !locked && (
         <div
           ref={menuRef}
-          className="absolute top-full left-0 z-50 w-64 bg-white border border-gray-200 rounded-md shadow-lg"
+          className="absolute top-full left-0 z-50 w-72 bg-white border border-gray-200 rounded-md shadow-lg"
         >
           <div className="p-3 space-y-3">
             <div className="flex items-center justify-between">
@@ -273,6 +251,53 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
                   Limpiar
                 </button>
               )}
+            </div>
+
+            {/* Sort selection */}
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">
+                Orden
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {(['asc','desc'] as const).map(dir => (
+                  <button
+                    key={dir}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelectedSort(dir);
+                      onSort(dir);
+                    }}
+                    className={cn(
+                      "px-2 py-1 text-xs rounded border",
+                      selectedSort === dir ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    )}
+                  >
+                    {getSortLabels()[dir]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Last modified sort */}
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">
+                Modificación
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onSortByColumn('updated_at', 'desc'); }}
+                  className="px-2 py-1 text-xs rounded border bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                >
+                  Último modificado
+                </button>
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onSortByColumn('updated_at', 'asc'); }}
+                  className="px-2 py-1 text-xs rounded border bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                >
+                  Más antiguo (modif.)
+                </button>
+              </div>
             </div>
 
             {/* Operator selection */}

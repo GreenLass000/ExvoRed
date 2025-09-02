@@ -45,8 +45,8 @@ export const ColumnVisibilityPanel: React.FC<ColumnVisibilityPanelProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className={cn(
-        "bg-white dark:bg-gray-800 rounded-lg shadow-xl",
-        "w-96 max-h-96 flex flex-col",
+        "bg-white dark:bg-gray-800 rounded-xl shadow-2xl",
+        "w-full max-w-4xl max-h-[80vh] flex flex-col mx-4",
         "border border-gray-200 dark:border-gray-700",
         className
       )}>
@@ -88,12 +88,12 @@ export const ColumnVisibilityPanel: React.FC<ColumnVisibilityPanelProps> = ({
         </div>
 
         {/* Stats */}
-        <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 text-sm text-gray-600 dark:text-gray-300">
+        <div className="px-6 py-3 bg-gray-50 dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-300">
           {visibleCount} de {totalCount} columnas visibles
         </div>
 
         {/* Search */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="relative">
             <svg 
               width="16" 
@@ -112,9 +112,9 @@ export const ColumnVisibilityPanel: React.FC<ColumnVisibilityPanelProps> = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className={cn(
-                "w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600",
-                "rounded-md bg-white dark:bg-gray-800",
-                "text-gray-900 dark:text-gray-100",
+                "w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600",
+                "rounded-lg bg-white dark:bg-gray-800",
+                "text-gray-900 dark:text-gray-100 text-base",
                 "placeholder-gray-500 dark:placeholder-gray-400",
                 "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               )}
@@ -123,15 +123,15 @@ export const ColumnVisibilityPanel: React.FC<ColumnVisibilityPanelProps> = ({
         </div>
 
         {/* Column List */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-2">
+        <div className="flex-1 overflow-y-auto p-2">
+          <div className="p-4">
             {/* Select All */}
             <button
               onClick={handleSelectAll}
               className={cn(
-                "w-full flex items-center gap-2 p-2 text-left",
-                "hover:bg-gray-100 dark:hover:bg-gray-700 rounded",
-                "text-sm font-medium text-blue-600 dark:text-blue-400",
+                "w-full flex items-center gap-2 p-3 text-left",
+                "hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg",
+                "text-sm font-semibold text-blue-700 dark:text-blue-300",
                 "transition-colors"
               )}
             >
@@ -152,7 +152,7 @@ export const ColumnVisibilityPanel: React.FC<ColumnVisibilityPanelProps> = ({
               <div
                 key={column.key}
                 className={cn(
-                  "flex items-center gap-2 p-2 rounded transition-colors",
+                  "flex items-center gap-3 p-3 rounded-lg transition-colors",
                   "hover:bg-gray-100 dark:hover:bg-gray-700",
                   column.locked && "opacity-60"
                 )}
@@ -164,7 +164,7 @@ export const ColumnVisibilityPanel: React.FC<ColumnVisibilityPanelProps> = ({
                     disabled={column.locked}
                     onChange={(e) => handleToggleColumn(column.key, e as any)}
                     className={cn(
-                      "rounded border-gray-300 dark:border-gray-600",
+                      "rounded border-gray-300 dark:border-gray-600 h-5 w-5",
                       "text-blue-600 focus:ring-blue-500",
                       "disabled:opacity-50 disabled:cursor-not-allowed"
                     )}
@@ -174,7 +174,7 @@ export const ColumnVisibilityPanel: React.FC<ColumnVisibilityPanelProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className={cn(
-                      "text-sm text-gray-900 dark:text-gray-100 truncate",
+                      "text-base text-gray-900 dark:text-gray-100 truncate",
                       !column.visible && "line-through opacity-60"
                     )}>
                       {column.key.charAt(0).toUpperCase() + column.key.slice(1)}
@@ -190,7 +190,7 @@ export const ColumnVisibilityPanel: React.FC<ColumnVisibilityPanelProps> = ({
                     )}
                   </div>
                   
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     Ancho: {column.width}px
                   </div>
                 </div>

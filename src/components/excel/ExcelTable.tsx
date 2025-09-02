@@ -153,27 +153,56 @@ const ExcelTableInner = <T extends Record<string, any>>({
     }
   }, [excelState.selectedCell, excelState.visibleColumns, excelState.filteredData, excelActions]);
 
-  // Search results state
+  // Search results state (uses display values for referenced fields)
   const searchResults = useMemo(() => {
     if (!searchQuery || searchQuery.length < 2) return [];
-    
+
+    const normalizeText = (text: string): string =>
+      text
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    const extractTextFromReactNode = (node: React.ReactNode): string => {
+      if (typeof node === 'string') return node;
+      if (typeof node === 'number') return String(node);
+      if (node == null) return '';
+      if (React.isValidElement(node)) {
+        if (typeof node.props?.children === 'string') return node.props.children;
+        if (typeof node.props?.children === 'number') return String(node.props.children);
+      }
+      return String(node);
+    };
+
+    const normQuery = normalizeText(searchQuery);
     const results: Array<{ rowIndex: number; columnKey: string; content: string }> = [];
-    
+
     excelState.filteredData.forEach((item, rowIndex) => {
-      excelState.visibleColumns.forEach(column => {
-        const value = String(item[column.key] || '').toLowerCase();
-        if (value.includes(searchQuery.toLowerCase())) {
+      excelState.visibleColumns.forEach(visibleCol => {
+        const colDef = columns.find(c => String(c.key) === visibleCol.key);
+        let displayText = '';
+        if (colDef?.getDisplayValue) {
+          try {
+            displayText = extractTextFromReactNode(colDef.getDisplayValue(item)) || '';
+          } catch {
+            displayText = '';
+          }
+        } else {
+          displayText = String(item[visibleCol.key] ?? '');
+        }
+
+        if (normalizeText(displayText).includes(normQuery)) {
           results.push({
             rowIndex,
-            columnKey: column.key,
-            content: String(item[column.key] || '')
+            columnKey: visibleCol.key,
+            content: displayText
           });
         }
       });
     });
-    
+
     return results;
-  }, [searchQuery, excelState.filteredData, excelState.visibleColumns]);
+  }, [searchQuery, excelState.filteredData, excelState.visibleColumns, columns]);
   
   // Function to select a cell programmatically
   const selectCellProgrammatically = useCallback((rowIndex: number, columnKey: string) => {
@@ -435,7 +464,8 @@ const ExcelTableInner = <T extends Record<string, any>>({
                         columnKey={column.key}
                         sortDirection={column.sortDirection}
                         hasFilter={excelState.filters.some(f => f.columnKey === column.key)}
-                        onSort={() => excelActions.sortByColumn(column.key)}
+                        onSort={(direction) => excelActions.sortByColumn(column.key, direction)}
+                        onSortByColumn={(key, direction) => excelActions.sortByColumn(key, direction)}
                         onAddFilter={(filter) => excelActions.addFilter(filter)}
                         onRemoveFilter={() => excelActions.removeFilter(column.key)}
                         locked={column.locked}
