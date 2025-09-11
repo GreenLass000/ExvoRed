@@ -10,7 +10,8 @@ import catalogSemRoutes from './routes/catalogSemRoutes.js';
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+// Aumentar el límite para permitir imágenes en base64
+app.use(express.json({ limit: '10mb' }));
 
 // Rutas de API
 app.use('/api/miracles', miracleRoutes);

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Exvoto, Sem } from '../types';
 import * as api from '../services/api';
+import { getImageSrc } from '../utils/images';
 
 const DetailField = ({ label, value }: { label: string, value: React.ReactNode }) => {
     if (value === null || value === undefined || value === '') {
@@ -118,7 +119,7 @@ const ExvotoDetailPage: React.FC = () => {
     }
 
     return (
-        <div className="bg-white shadow-xl rounded-lg overflow-hidden max-w-4xl mx-auto">
+        <div className="bg-white shadow-xl rounded-lg overflow-hidden max-w-6xl mx-auto">
             <div className="p-6 sm:p-8">
                 <div className="flex justify-between items-start">
                     <div>
@@ -130,61 +131,77 @@ const ExvotoDetailPage: React.FC = () => {
                     </Link>
                 </div>
                 
-                <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                {/* Contenido principal en dos zonas: detalles (2/3) e imagen (1/3) */}
+                <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Zona detalles */}
+                  <div className="lg:col-span-2 space-y-8">
                     {/* Sección principal */}
                     <div className="space-y-6">
-                        <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Detalles del Milagro</h2>
-                        <dl className="space-y-4">
+                      <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Detalles del Milagro</h2>
+                      <dl className="space-y-4">
 <DetailField label="Fecha" value={formatDate(exvoto.exvoto_date)} />
-                            <DetailField label="Época (25 años)" value={exvoto.epoch} />
-                            <DetailField label="Milagro" value={exvoto.miracle} />
-                            <DetailField label="Lugar del Milagro" value={exvoto.miracle_place} />
-                            <DetailField label="Provincia" value={exvoto.province} />
-                        </dl>
+                        <DetailField label="Época (25 años)" value={exvoto.epoch} />
+                        <DetailField label="Milagro" value={exvoto.miracle} />
+                        <DetailField label="Lugar del Milagro" value={exvoto.miracle_place} />
+                        <DetailField label="Provincia" value={exvoto.province} />
+                      </dl>
                     </div>
 
-                     <div className="space-y-6">
-                        <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Ubicación</h2>
-                         <dl className="space-y-4">
-                            <DetailField label="Lugar de Ofrenda" value={semNameMap[exvoto.offering_sem_id!] || 'N/A'} />
-                            <DetailField label="Lugar de Origen del Milagro" value={semNameMap[exvoto.origin_sem_id!] || 'N/A'} />
-                            <DetailField label="Lugar de Conservación" value={semNameMap[exvoto.conservation_sem_id!] || 'N/A'} />
-                         </dl>
+                    <div className="space-y-6">
+                      <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Ubicación</h2>
+                      <dl className="space-y-4">
+                        <DetailField label="Lugar de Ofrenda" value={semNameMap[exvoto.offering_sem_id!] || 'N/A'} />
+                        <DetailField label="Lugar de Origen del Milagro" value={semNameMap[(exvoto as any).origin_sem_id!] || 'N/A'} />
+                        <DetailField label="Lugar de Conservación" value={semNameMap[exvoto.conservation_sem_id!] || 'N/A'} />
+                      </dl>
                     </div>
 
-                    <div className="space-y-6 md:col-span-2">
-                        <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Personas Involucradas</h2>
-                        <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                            <DetailField label="Beneficiado" value={exvoto.benefited_name} />
-                            <DetailField label="Oferente" value={exvoto.offerer_name} />
-                            <DetailField label="Género del Oferente" value={exvoto.offerer_gender} />
-                            <DetailField label="Relación Oferente-Beneficiado" value={exvoto.offerer_relation} />
-                            <DetailField label="Profesión" value={exvoto.profession} />
-                            <DetailField label="Estatus Social" value={exvoto.social_status} />
-                        </dl>
+                    <div className="space-y-6">
+                      <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Personas Involucradas</h2>
+                      <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                        <DetailField label="Beneficiado" value={exvoto.benefited_name} />
+                        <DetailField label="Oferente" value={exvoto.offerer_name} />
+                        <DetailField label="Género del Oferente" value={exvoto.offerer_gender} />
+                        <DetailField label="Relación Oferente-Beneficiado" value={exvoto.offerer_relation} />
+                        <DetailField label="Profesión" value={exvoto.profession} />
+                        <DetailField label="Estatus Social" value={exvoto.social_status} />
+                      </dl>
                     </div>
 
-                    <div className="space-y-6 md:col-span-2">
-                        <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Descripción del Exvoto</h2>
-                        <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                            <DetailField label="Personajes representados" value={exvoto.characters} />
-                            <DetailField label="Material" value={exvoto.material} />
-                            <DetailField label="Dimensiones" value={exvoto.dimensions} />
-                            <DetailField label="Estado de Conservación" value={exvoto.conservation_status} />
-                        </dl>
+                    <div className="space-y-6">
+                      <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Descripción del Exvoto</h2>
+                      <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                        <DetailField label="Personajes representados" value={exvoto.characters} />
+                        <DetailField label="Material" value={exvoto.material} />
+                        <DetailField label="Dimensiones" value={exvoto.dimensions} />
+                        <DetailField label="Estado de Conservación" value={exvoto.conservation_status} />
+                      </dl>
                     </div>
                     
                     {(exvoto.transcription || exvoto.extra_info) && (
-                        <div className="space-y-6 md:col-span-2">
-                            <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Textos y Notas</h2>
-                            <dl className="space-y-4">
-                               <DetailField label="Transcripción" value={exvoto.transcription ? <p className="whitespace-pre-wrap font-serif italic">{exvoto.transcription}</p> : null} />
-                               <DetailField label="Información Adicional" value={exvoto.extra_info} />
-                               <DetailField label="Uso de Mayúsculas" value={exvoto.text_case} />
-                               <DetailField label="Forma del Texto" value={exvoto.text_form} />
-                            </dl>
-                        </div>
+                      <div className="space-y-6">
+                        <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Textos y Notas</h2>
+                        <dl className="space-y-4">
+                           <DetailField label="Transcripción" value={exvoto.transcription ? <p className="whitespace-pre-wrap font-serif italic">{exvoto.transcription}</p> : null} />
+                           <DetailField label="Información Adicional" value={exvoto.extra_info} />
+                           <DetailField label="Uso de Mayúsculas" value={exvoto.text_case} />
+                           <DetailField label="Forma del Texto" value={exvoto.text_form} />
+                        </dl>
+                      </div>
                     )}
+                  </div>
+
+                  {/* Zona imagen */}
+                  <aside>
+                    <h2 className="text-xl font-semibold text-slate-700 border-b pb-2 mb-4">Imagen</h2>
+                    <div className="border rounded-lg overflow-hidden bg-gray-50">
+                      <img
+                        src={getImageSrc(exvoto.image)}
+                        alt={`Imagen del exvoto ${exvoto.internal_id || ''}`}
+                        className="w-full h-80 object-contain bg-white"
+                      />
+                    </div>
+                  </aside>
                 </div>
             </div>
         </div>

@@ -15,6 +15,7 @@ import { Exvoto, Sem, Character, Miracle } from '../types';
 import { calculateEpochFromDate } from '../utils/epochUtils';
 import * as api from '../services/api';
 import { useNewShortcut } from '../hooks/useGlobalShortcut';
+import { getImageSrc } from '../utils/images';
 
 const getInitialExvotoData = (): Omit<Exvoto, 'id'> => ({
   internal_id: '',
@@ -55,6 +56,27 @@ const ExvotoPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExvoto, setEditingExvoto] = useState<Exvoto | null>(null);
   const [newExvotoData, setNewExvotoData] = useState<Omit<Exvoto, 'id'>>(getInitialExvotoData());
+
+  // Modal rápido para crear SEM desde el formulario de Exvoto
+  const [isSemModalOpen, setIsSemModalOpen] = useState(false);
+  const [semFieldTarget, setSemFieldTarget] = useState<'offering_sem_id' | 'conservation_sem_id' | null>(null);
+  const getInitialQuickSem = (): Omit<Sem, 'id'> => ({
+    name: '',
+    region: '',
+    province: '',
+    town: '',
+    associated_divinity: '',
+    festivity: '',
+    pictorial_exvoto_count: null,
+    oldest_exvoto_date: null,
+    newest_exvoto_date: null,
+    other_exvotos: '',
+    numero_exvotos: null,
+    comments: '',
+    references: '',
+    contact: ''
+  });
+  const [newSemQuick, setNewSemQuick] = useState<Omit<Sem, 'id'>>(getInitialQuickSem());
 
   // Atajo 'n' para crear nuevo exvoto
   useNewShortcut({ isModalOpen, onNew: () => handleOpenModal() });
@@ -122,6 +144,19 @@ const ExvotoPage: React.FC = () => {
   }, [semNameMap]);
 
 const columns: ColumnDef<Exvoto>[] = useMemo(() => [
+    {
+      key: 'image',
+      header: 'Imagen',
+      render: (value) => {
+        // miniatura
+        const src = getImageSrc(value as string | null);
+        return (
+          <div className="flex items-center justify-center w-full">
+            <img src={src} alt="Miniatura" className="h-12 w-12 object-cover rounded border border-gray-200 bg-gray-100" />
+          </div>
+        );
+      }
+    },
     { key: 'internal_id', header: 'ID Interno' },
     {
       key: 'offering_sem_id',
@@ -160,7 +195,7 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
     { key: 'conservation_status', header: 'Estado Conservación' },
     { key: 'extra_info', header: 'Info Extra', type: 'truncated' },
     { key: 'transcription', header: 'Transcripción', type: 'truncated' }
-  ], [getSemDisplayValue, navigate]);
+  ], [getSemDisplayValue, navigate, sems]);
 
   const handleUpdate = async (id: number, data: Partial<Exvoto>) => {
     const updatedExvoto = await api.updateExvoto(id, data);
@@ -270,13 +305,31 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
       );
     }
     if (type === 'select') {
+      const isSemField = name === 'offering_sem_id' || name === 'conservation_sem_id';
       return (
         <div key={name}>
           <label htmlFor={name} className="block text-sm font-medium text-slate-700">{label}</label>
-          <select id={name} name={name} value={value ?? ''} onChange={handleFormChange} className={commonClass}>
-            <option value="">-- Seleccionar --</option>
-            {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-          </select>
+          <div className="flex items-center gap-2">
+            <select id={name} name={name} value={value ?? ''} onChange={handleFormChange} className={commonClass}>
+              <option value="">-- Seleccionar --</option>
+              {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            </select>
+            {isSemField && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSemFieldTarget(name as 'offering_sem_id' | 'conservation_sem_id');
+                  setNewSemQuick(getInitialQuickSem());
+                  setIsSemModalOpen(true);
+                }}
+                className="inline-flex items-center justify-center h-10 w-10 rounded-md border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                title="Añadir SEM"
+                aria-label="Añadir SEM"
+              >
+                <PlusIcon className="w-5 h-5" />
+              </button>
+            )}
+          </div>
         </div>
       );
     }
@@ -374,12 +427,126 @@ return (
             {renderFormField('Estado de Conservación', 'conservation_status')}
             {renderFormField('Información Extra', 'extra_info', 'textarea')}
             {renderFormField('Transcripción', 'transcription', 'textarea')}
+            {/* Campo de imagen */}
+            <div className="md:col-span-2 lg:col-span-3">
+              <label className="block text-sm font-medium text-slate-700">Imagen</label>
+              <div className="mt-2 flex items-center gap-4 flex-wrap">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      const dataUrl = reader.result as string;
+                      setNewExvotoData(prev => ({ ...prev, image: dataUrl }));
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                  className="block text-sm text-slate-700"
+                />
+                {newExvotoData.image && (
+                  <>
+                    <img src={newExvotoData.image!} alt="Vista previa" className="h-24 w-24 object-cover rounded border border-gray-200" />
+                    <button
+                      type="button"
+                      onClick={() => setNewExvotoData(prev => ({ ...prev, image: null }))}
+                      className="px-3 py-2 bg-slate-200 text-slate-800 rounded hover:bg-slate-300"
+                    >Quitar imagen</button>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
           <div className="flex justify-end pt-8 sticky bottom-0 bg-white py-4 -mx-6 px-6 border-t">
             <button type="button" onClick={handleModalClose} className="mr-3 px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300">Cancelar</button>
             <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">
               {editingExvoto ? "Actualizar Exvoto" : "Guardar Exvoto"}
             </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal rápido para crear SEM */}
+      <Modal isOpen={isSemModalOpen} onClose={() => setIsSemModalOpen(false)} title="Añadir SEM">
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            try {
+              if (!newSemQuick.name || newSemQuick.name.trim() === '') return;
+              const created = await api.createSem(newSemQuick);
+              setSems(prev => [...prev, created]);
+              if (semFieldTarget) {
+                setNewExvotoData(prev => ({ ...prev, [semFieldTarget]: created.id }));
+              }
+              setIsSemModalOpen(false);
+            } catch (err) {
+              console.error('Error al crear SEM rápido:', err);
+            }
+          }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700" htmlFor="quick_sem_name">Nombre</label>
+              <input
+                id="quick_sem_name"
+                name="name"
+                value={newSemQuick.name ?? ''}
+                onChange={(e) => setNewSemQuick(prev => ({ ...prev, name: e.target.value }))}
+                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Nombre del SEM"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700" htmlFor="quick_sem_region">Región</label>
+              <input
+                id="quick_sem_region"
+                name="region"
+                value={newSemQuick.region ?? ''}
+                onChange={(e) => setNewSemQuick(prev => ({ ...prev, region: e.target.value }))}
+                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Región"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700" htmlFor="quick_sem_province">Provincia</label>
+              <input
+                id="quick_sem_province"
+                name="province"
+                value={newSemQuick.province ?? ''}
+                onChange={(e) => setNewSemQuick(prev => ({ ...prev, province: e.target.value }))}
+                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Provincia"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700" htmlFor="quick_sem_town">Población</label>
+              <input
+                id="quick_sem_town"
+                name="town"
+                value={newSemQuick.town ?? ''}
+                onChange={(e) => setNewSemQuick(prev => ({ ...prev, town: e.target.value }))}
+                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Población"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700" htmlFor="quick_sem_divinity">Divinidad asociada</label>
+              <input
+                id="quick_sem_divinity"
+                name="associated_divinity"
+                value={newSemQuick.associated_divinity ?? ''}
+                onChange={(e) => setNewSemQuick(prev => ({ ...prev, associated_divinity: e.target.value }))}
+                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Divinidad asociada (opcional)"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end pt-6">
+            <button type="button" onClick={() => setIsSemModalOpen(false)} className="mr-3 px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300">Cancelar</button>
+            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">Guardar SEM</button>
           </div>
         </form>
       </Modal>
@@ -417,7 +584,7 @@ return (
             navigate(`/catalog/${id}`);
           }
         }}
-        blockNavigation={isModalOpen}
+        blockNavigation={isModalOpen || isSemModalOpen}
         idField="id"
         enableKeyboardNavigation={true}
         onRowUpdate={handleUpdate}
