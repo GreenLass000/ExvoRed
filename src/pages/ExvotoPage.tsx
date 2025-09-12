@@ -444,11 +444,18 @@ return (
               <div className="mt-2 flex items-center gap-4 flex-wrap">
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/jpg,image/png"
                   multiple
                   onChange={(e) => {
                     const files = Array.from(e.target.files || []);
                     if (files.length === 0) return;
+                    // Validar tipos permitidos
+                    const allowed = ['image/jpeg', 'image/jpg', 'image/png'];
+                    const invalid = files.filter(f => !allowed.includes((f as any).type?.toLowerCase?.() || ''));
+                    if (invalid.length > 0) {
+                      alert('Solo se permiten imágenes JPG, JPEG o PNG.');
+                      return;
+                    }
                     Promise.all(
                       files.map(
                         (file) =>

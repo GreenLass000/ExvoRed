@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Exvoto, Sem } from '../types';
+import { Exvoto, Sem, ExvotoImage as ExvotoImageType } from '../types';
 import * as api from '../services/api';
 import { getImageSrc } from '../utils/images';
+import Modal from '../components/Modal';
 
 const DetailField = ({ label, value }: { label: string, value: React.ReactNode }) => {
     if (value === null || value === undefined || value === '') {
@@ -22,8 +23,11 @@ const ExvotoDetailPage: React.FC = () => {
     const navigate = useNavigate();
     const [exvoto, setExvoto] = useState<Exvoto | null>(null);
     const [sems, setSems] = useState<Sem[]>([]);
-    const [images, setImages] = useState<string[]>([]);
-    const [activeImage, setActiveImage] = useState<string | null>(null);
+    const [mainImage, setMainImage] = useState<string | null>(null);
+    const [extraImages, setExtraImages] = useState<ExvotoImageType[]>([]);
+    type ActiveImage = { type: 'main'; src: string | null } | { type: 'extra'; id: number; src: string };
+    const [activeImage, setActiveImage] = useState<ActiveImage | null>(null);
+    const [isZoomOpen, setIsZoomOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -47,9 +51,12 @@ const ExvotoDetailPage: React.FC = () => {
                 if (exvotoData) {
                     setExvoto(exvotoData);
                     setSems(semsData);
-                    const imgs = [exvotoData.image, ...exvotoImages.map(i => i.image)].filter(Boolean) as string[];
-                    setImages(imgs);
-                    setActiveImage(imgs[0] ?? null);
+                    setMainImage(exvotoData.image ?? null);
+                    setExtraImages(exvotoImages);
+                    const initialActive: ActiveImage | null = exvotoData.image
+                        ? { type: 'main', src: exvotoData.image }
+                        : (exvotoImages[0] ? { type: 'extra', id: exvotoImages[0].id, src: exvotoImages[0].image } : null);
+                    setActiveImage(initialActive);
                 } else {
                     setError("No se encontró el exvoto.");
                 }
@@ -202,26 +209,92 @@ const ExvotoDetailPage: React.FC = () => {
                     <h2 className="text-xl font-semibold text-slate-700 border-b pb-2 mb-4">Imagen</h2>
                     <div className="border rounded-lg overflow-hidden bg-gray-50">
                       <img
-                        src={getImageSrc(activeImage)}
+                        src={getImageSrc(activeImage?.type === 'main' ? activeImage?.src : (activeImage as any)?.src)}
                         alt={`Imagen del exvoto ${exvoto.internal_id || ''}`}
-                        className="w-full h-80 object-contain bg-white"
+                        className="w-full h-80 object-contain bg-white cursor-zoom-in"
+                        onClick={() => setIsZoomOpen(true)}
                       />
-                      {images.length > 1 && (
+                      {((mainImage ? 1 : 0) + extraImages.length) > 1 && (
                         <div className="p-2 flex gap-2 overflow-x-auto bg-gray-50 border-t">
-                          {images.map((img, idx) => (
+                          {mainImage && (
                             <button
-                              key={idx}
                               type="button"
-                              onClick={() => setActiveImage(img)}
-                              className={`border rounded ${activeImage === img ? 'ring-2 ring-blue-500' : ''}`}
+                              onClick={() => setActiveImage({ type: 'main', src: mainImage })}
+                              className={`border rounded ${activeImage?.type === 'main' ? 'ring-2 ring-blue-500' : ''}`}
+                              title="Portada"
+                            >
+                              <img src={getImageSrc(mainImage)} alt="Portada" className="h-16 w-16 object-cover" />
+                            </button>
+                          )}
+                          {extraImages.map((img, idx) => (
+                            <button
+                              key={img.id}
+                              type="button"
+                              onClick={() => setActiveImage({ type: 'extra', id: img.id, src: img.image })}
+                              className={`border rounded ${activeImage?.type === 'extra' && (activeImage as any).id === img.id ? 'ring-2 ring-blue-500' : ''}`}
                               title={`Imagen ${idx + 1}`}
                             >
-                              <img src={getImageSrc(img)} alt={`Miniatura ${idx + 1}`} className="h-16 w-16 object-cover" />
+                              <img src={getImageSrc(img.image)} alt={`Miniatura ${idx + 1}`} className="h-16 w-16 object-cover" />
                             </button>
                           ))}
                         </div>
                       )}
                     </div>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsZoomOpen(true)}
+                        className="px-3 py-2 bg-slate-200 text-slate-800 rounded hover:bg-slate-300"
+                      >Ampliar</button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!exvoto || !activeImage) return;
+                          const confirmed = window.confirm('¿Seguro que quieres eliminar esta imagen?');
+                          if (!confirmed) return;
+                          try {
+                            if (activeImage.type === 'main') {
+                              const updated = await api.updateExvoto(exvoto.id, { image: null });
+                              setExvoto(updated);
+                              setMainImage(null);
+                              if (extraImages.length > 0) {
+                                const first = extraImages[0];
+                                setActiveImage({ type: 'extra', id: first.id, src: first.image });
+                              } else {
+                                setActiveImage(null);
+                              }
+                            } else {
+                              await api.deleteExvotoImage(exvoto.id, activeImage.id);
+                              const remaining = extraImages.filter(i => i.id !== activeImage.id);
+                              setExtraImages(remaining);
+                              if (remaining.length > 0) {
+                                setActiveImage({ type: 'extra', id: remaining[0].id, src: remaining[0].image });
+                              } else if (mainImage) {
+                                setActiveImage({ type: 'main', src: mainImage });
+                              } else {
+                                setActiveImage(null);
+                              }
+                            }
+                          } catch (err) {
+                            console.error('Error eliminando imagen:', err);
+                            alert('No se pudo eliminar la imagen');
+                          }
+                        }}
+                        disabled={!activeImage || (activeImage.type === 'main' && !activeImage.src)}
+                        className="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                      >Eliminar imagen</button>
+                    </div>
+
+                    {/* Modal de zoom */}
+                    <Modal isOpen={isZoomOpen} onClose={() => setIsZoomOpen(false)} title="Imagen ampliada">
+                      <div className="flex items-center justify-center">
+                        <img
+                          src={getImageSrc(activeImage?.type === 'main' ? activeImage?.src : (activeImage as any)?.src)}
+                          alt="Imagen ampliada"
+                          className="max-h-[75vh] w-auto object-contain"
+                        />
+                      </div>
+                    </Modal>
                   </aside>
                 </div>
             </div>

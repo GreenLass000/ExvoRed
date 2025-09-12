@@ -24,6 +24,8 @@ function detectMimeType(buffer: Buffer): string {
   return 'image/jpeg';
 }
 
+const ALLOWED_IMAGE_MIME = new Set(['image/jpeg', 'image/jpg', 'image/png']);
+
 function toBuffer(value: any): Buffer | null {
   if (value == null) return null;
   if (Buffer.isBuffer(value)) return value as Buffer;
@@ -95,6 +97,12 @@ export const exvotoController = {
       let imageBuffer: Buffer | null = null;
       if (typeof (exvotoData as any).image === 'string') {
         imageBuffer = toBuffer((exvotoData as any).image);
+        if (imageBuffer) {
+          const mime = detectMimeType(imageBuffer);
+          if (!ALLOWED_IMAGE_MIME.has(mime)) {
+            return res.status(400).json({ error: 'Solo se permiten imágenes JPG, JPEG o PNG.' });
+          }
+        }
       }
 
       const payload: any = { ...exvotoData, image: imageBuffer ?? null, updated_at: now };
@@ -119,7 +127,14 @@ export const exvotoController = {
 
       const payload: any = { ...exvotoData, updated_at: now };
       if (typeof (exvotoData as any).image === 'string') {
-        payload.image = toBuffer((exvotoData as any).image);
+        const buf = toBuffer((exvotoData as any).image);
+        if (buf) {
+          const mime = detectMimeType(buf);
+          if (!ALLOWED_IMAGE_MIME.has(mime)) {
+            return res.status(400).json({ error: 'Solo se permiten imágenes JPG, JPEG o PNG.' });
+          }
+        }
+        payload.image = buf;
       }
 
       const result = await db.update(exvoto)
@@ -169,13 +184,23 @@ export const exvotoController = {
         return res.status(400).json({ error: 'images must be a non-empty array' });
       }
       const now = new Date().toISOString();
-      const rowsToInsert = images.map((img, idx) => ({
-        exvoto_id: id,
-        image: toBuffer(img),
-        caption: captions && captions[idx] ? captions[idx] : null,
-        updated_at: now,
-      }));
-      const inserted = await db.insert(exvotoImage).values(rowsToInsert as any).returning();
+      const rowsToInsert = images.map((img, idx) => {
+        const buf = toBuffer(img);
+        if (!buf) return null;
+        const mime = detectMimeType(buf);
+        if (!ALLOWED_IMAGE_MIME.has(mime)) return 'INVALID';
+        return {
+          exvoto_id: id,
+          image: buf,
+          caption: captions && captions[idx] ? captions[idx] : null,
+          updated_at: now,
+        };
+      });
+      if (rowsToInsert.includes('INVALID' as any)) {
+        return res.status(400).json({ error: 'Solo se permiten imágenes JPG, JPEG o PNG.' });
+      }
+      const cleanRows = rowsToInsert.filter(Boolean) as any[];
+      const inserted = await db.insert(exvotoImage).values(cleanRows as any).returning();
       const mapped = inserted.map((r: any) => ({
         ...r,
         image: bufferToDataUrl(r.image),
