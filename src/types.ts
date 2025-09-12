@@ -83,6 +83,14 @@ export interface Character {
     updated_at?: string | null;
 }
 
+export interface ExvotoImage {
+    id: number;
+    exvoto_id: number;
+    image: string; // data URL o base64 normalizada
+    caption: string | null;
+    updated_at?: string | null;
+}
+
 export interface Miracle {
     id: number;
     name: string;

@@ -106,6 +106,25 @@ export const deleteExvoto = (id: number): Promise<{ message: string }> => {
     });
 };
 
+// --- EXVOTO IMAGES API ---
+import { ExvotoImage } from '../types';
+export const addExvotoImages = (exvotoId: number, images: string[], captions?: (string | null)[]): Promise<ExvotoImage[]> => {
+    return apiCall<ExvotoImage[]>(`/exvotos/${exvotoId}/images`, {
+        method: 'POST',
+        body: JSON.stringify({ images, captions }),
+    });
+};
+
+export const getExvotoImages = (exvotoId: number): Promise<ExvotoImage[]> => {
+    return apiCall<ExvotoImage[]>(`/exvotos/${exvotoId}/images`);
+};
+
+export const deleteExvotoImage = (exvotoId: number, imageId: number): Promise<{ message: string }> => {
+    return apiCall<{ message: string }>(`/exvotos/${exvotoId}/images/${imageId}`, {
+        method: 'DELETE',
+    });
+};
+
 // --- CHARACTER API ---
 export const getCharacters = (): Promise<Character[]> => {
     return apiCall<Character[]>('/characters');

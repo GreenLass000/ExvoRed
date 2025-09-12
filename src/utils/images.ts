@@ -11,10 +11,31 @@ export const PLACEHOLDER_IMAGE_DATA_URL = (() => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 })();
 
-export function getImageSrc(image: string | null | undefined): string {
-  if (!image) return PLACEHOLDER_IMAGE_DATA_URL;
-  // Si ya viene como data URL, usarla; si es base64 pura, prefix por defecto jpeg
-  if (image.startsWith('data:')) return image;
-  return `data:image/jpeg;base64,${image}`;
+export function getImageSrc(image: any): string {
+  try {
+    if (!image) return PLACEHOLDER_IMAGE_DATA_URL;
+    if (typeof image !== 'string') return PLACEHOLDER_IMAGE_DATA_URL;
+
+    const trimmed = image.trim();
+    if (!trimmed || trimmed.toLowerCase() === 'null' || trimmed.toLowerCase() === 'undefined') {
+      return PLACEHOLDER_IMAGE_DATA_URL;
+    }
+
+    // Si es data URL, validar que tenga datos
+    if (trimmed.startsWith('data:')) {
+      const commaIndex = trimmed.indexOf(',');
+      if (commaIndex === -1) return PLACEHOLDER_IMAGE_DATA_URL;
+      const payload = trimmed.slice(commaIndex + 1);
+      if (!payload || payload.length < 8) return PLACEHOLDER_IMAGE_DATA_URL; // vacío o inválido
+      return trimmed;
+    }
+
+    // Si es base64 "puro", normalizar (sin espacios) y prefijar (suponemos jpeg)
+    const b64 = trimmed.replace(/\s+/g, '');
+    if (!b64 || b64.length < 8) return PLACEHOLDER_IMAGE_DATA_URL;
+    return `data:image/jpeg;base64,${b64}`;
+  } catch {
+    return PLACEHOLDER_IMAGE_DATA_URL;
+  }
 }
 

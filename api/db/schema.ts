@@ -81,8 +81,17 @@ export const exvoto = sqliteTable('exvoto', {
   extra_info: text('extra_info', { length: 500 }),
   transcription: text('transcription'),
   conservation_status: text('conservation_status', { length: 100 }),
-  image: blob('image'),
+  image: blob('image'), // imagen principal (portada)
 updated_at: text('updated_at'),
+});
+
+// Tabla exvoto_image (múltiples imágenes por exvoto)
+export const exvotoImage = sqliteTable('exvoto_image', {
+  id: integer('id').primaryKey({ autoIncrement: true }).notNull(),
+  exvoto_id: integer('exvoto_id').notNull(),
+  image: blob('image').notNull(),
+  caption: text('caption'),
+  updated_at: text('updated_at'),
 });
 
 // Tabla intermedia catalog_exvoto
@@ -135,6 +144,7 @@ export const exvotoRelations = relations(exvoto, ({ one, many }) => ({
     relationName: 'conservation_sem',
   }),
   catalog_exvotos: many(catalogExvoto),
+  images: many(exvotoImage),
 }));
 
 export const catalogRelations = relations(catalog, ({ many }) => ({
@@ -194,6 +204,9 @@ export type NewCatalog = typeof catalog.$inferInsert;
 
 export type Exvoto = typeof exvoto.$inferSelect;
 export type NewExvoto = typeof exvoto.$inferInsert;
+
+export type ExvotoImage = typeof exvotoImage.$inferSelect;
+export type NewExvotoImage = typeof exvotoImage.$inferInsert;
 
 export type Divinity = typeof divinity.$inferSelect;
 export type NewDivinity = typeof divinity.$inferInsert;

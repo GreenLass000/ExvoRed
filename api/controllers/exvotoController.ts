@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { exvoto, NewExvoto } from '../db/schema.js';
+import { exvoto, exvotoImage, NewExvoto } from '../db/schema.js';
 
 // Helper: detectar mime por cabecera
 function detectMimeType(buffer: Buffer): string {
@@ -157,6 +157,62 @@ export const exvotoController = {
     } catch (error) {
       console.error('Error deleting exvoto:', error);
       res.status(500).json({ error: 'Failed to delete exvoto' });
+    }
+  },
+
+  // POST /api/exvotos/:id/images - Añadir una o varias imágenes adicionales
+  async addImages(req: Request, res: Response) {
+    try {
+      const id = parseInt(req.params.id);
+      const { images, captions } = req.body as { images: string[]; captions?: (string | null)[] };
+      if (!Array.isArray(images) || images.length === 0) {
+        return res.status(400).json({ error: 'images must be a non-empty array' });
+      }
+      const now = new Date().toISOString();
+      const rowsToInsert = images.map((img, idx) => ({
+        exvoto_id: id,
+        image: toBuffer(img),
+        caption: captions && captions[idx] ? captions[idx] : null,
+        updated_at: now,
+      }));
+      const inserted = await db.insert(exvotoImage).values(rowsToInsert as any).returning();
+      const mapped = inserted.map((r: any) => ({
+        ...r,
+        image: bufferToDataUrl(r.image),
+      }));
+      res.status(201).json(mapped);
+    } catch (error) {
+      console.error('Error adding exvoto images:', error);
+      res.status(500).json({ error: 'Failed to add images' });
+    }
+  },
+
+  // GET /api/exvotos/:id/images - Listar imágenes de un exvoto
+  async getImages(req: Request, res: Response) {
+    try {
+      const id = parseInt(req.params.id);
+      const rows = await db.select().from(exvotoImage).where(eq(exvotoImage.exvoto_id, id));
+      const mapped = rows.map((r: any) => ({ ...r, image: bufferToDataUrl(r.image) }));
+      res.json(mapped);
+    } catch (error) {
+      console.error('Error fetching exvoto images:', error);
+      res.status(500).json({ error: 'Failed to fetch images' });
+    }
+  },
+
+  // DELETE /api/exvotos/:id/images/:imageId - Eliminar una imagen
+  async deleteImage(req: Request, res: Response) {
+    try {
+      const id = parseInt(req.params.id);
+      const imageId = parseInt(req.params.imageId);
+      const result = await db.delete(exvotoImage)
+        .where(and(eq(exvotoImage.id, imageId), eq(exvotoImage.exvoto_id, id)))
+        .returning();
+      if (result.length === 0) return res.status(404).json({ error: 'Image not found' });
+      res.json({ message: 'Image deleted' });
+    } catch (error) {
+      console.error('Error deleting exvoto image:', error);
+      res.status(500).json({ error: 'Failed to delete image' });
     }
   }
 };

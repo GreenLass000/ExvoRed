@@ -56,6 +56,7 @@ const ExvotoPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExvoto, setEditingExvoto] = useState<Exvoto | null>(null);
   const [newExvotoData, setNewExvotoData] = useState<Omit<Exvoto, 'id'>>(getInitialExvotoData());
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
 
   // Modal rápido para crear SEM desde el formulario de Exvoto
   const [isSemModalOpen, setIsSemModalOpen] = useState(false);
@@ -250,11 +251,21 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingExvoto) {
-      await api.updateExvoto(editingExvoto.id, newExvotoData);
+      const updated = await api.updateExvoto(editingExvoto.id, newExvotoData);
+      // Subir imágenes adicionales seleccionadas (si hay más de una)
+      const extra = selectedImages.slice(1);
+      if (extra.length > 0) {
+        try { await api.addExvotoImages(updated.id, extra); } catch (err) { console.error('Error subiendo imágenes extra:', err); }
+      }
     } else {
-      await api.createExvoto(newExvotoData);
+      const created = await api.createExvoto(newExvotoData);
+      const extra = selectedImages.slice(1);
+      if (extra.length > 0) {
+        try { await api.addExvotoImages(created.id, extra); } catch (err) { console.error('Error subiendo imágenes extra:', err); }
+      }
     }
     handleModalClose();
+    setSelectedImages([]);
     await fetchData();
   };
 
@@ -434,27 +445,50 @@ return (
                 <input
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                      const dataUrl = reader.result as string;
-                      setNewExvotoData(prev => ({ ...prev, image: dataUrl }));
-                    };
-                    reader.readAsDataURL(file);
+                    const files = Array.from(e.target.files || []);
+                    if (files.length === 0) return;
+                    Promise.all(
+                      files.map(
+                        (file) =>
+                          new Promise<string>((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result as string);
+                            reader.onerror = reject;
+                            reader.readAsDataURL(file);
+                          })
+                      )
+                    )
+                      .then((urls) => {
+                        setSelectedImages(urls);
+                        setNewExvotoData((prev) => ({ ...prev, image: urls[0] || null })); // primera como portada
+                      })
+                      .catch((err) => {
+                        console.error('Error leyendo imágenes:', err);
+                      });
                   }}
                   className="block text-sm text-slate-700"
                 />
-                {newExvotoData.image && (
-                  <>
-                    <img src={newExvotoData.image!} alt="Vista previa" className="h-24 w-24 object-cover rounded border border-gray-200" />
+                {selectedImages.length > 0 && (
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {selectedImages.map((imgSrc, idx) => (
+                      <img
+                        key={idx}
+                        src={getImageSrc(imgSrc)}
+                        alt={`Vista previa ${idx + 1}`}
+                        className="h-20 w-20 object-cover rounded border border-gray-200 bg-white"
+                      />
+                    ))}
                     <button
                       type="button"
-                      onClick={() => setNewExvotoData(prev => ({ ...prev, image: null }))}
+                      onClick={() => {
+                        setSelectedImages([]);
+                        setNewExvotoData((prev) => ({ ...prev, image: null }));
+                      }}
                       className="px-3 py-2 bg-slate-200 text-slate-800 rounded hover:bg-slate-300"
-                    >Quitar imagen</button>
-                  </>
+                    >Quitar imágenes</button>
+                  </div>
                 )}
               </div>
             </div>

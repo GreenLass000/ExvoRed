@@ -22,6 +22,8 @@ const ExvotoDetailPage: React.FC = () => {
     const navigate = useNavigate();
     const [exvoto, setExvoto] = useState<Exvoto | null>(null);
     const [sems, setSems] = useState<Sem[]>([]);
+    const [images, setImages] = useState<string[]>([]);
+    const [activeImage, setActiveImage] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -36,14 +38,18 @@ const ExvotoDetailPage: React.FC = () => {
             try {
                 setLoading(true);
                 const exvotoId = parseInt(id, 10);
-                const [exvotoData, semsData] = await Promise.all([
+                const [exvotoData, semsData, exvotoImages] = await Promise.all([
                     api.getExvotoById(exvotoId),
-                    api.getSems()
+                    api.getSems(),
+                    api.getExvotoImages(exvotoId)
                 ]);
 
                 if (exvotoData) {
                     setExvoto(exvotoData);
                     setSems(semsData);
+                    const imgs = [exvotoData.image, ...exvotoImages.map(i => i.image)].filter(Boolean) as string[];
+                    setImages(imgs);
+                    setActiveImage(imgs[0] ?? null);
                 } else {
                     setError("No se encontró el exvoto.");
                 }
@@ -196,10 +202,25 @@ const ExvotoDetailPage: React.FC = () => {
                     <h2 className="text-xl font-semibold text-slate-700 border-b pb-2 mb-4">Imagen</h2>
                     <div className="border rounded-lg overflow-hidden bg-gray-50">
                       <img
-                        src={getImageSrc(exvoto.image)}
+                        src={getImageSrc(activeImage)}
                         alt={`Imagen del exvoto ${exvoto.internal_id || ''}`}
                         className="w-full h-80 object-contain bg-white"
                       />
+                      {images.length > 1 && (
+                        <div className="p-2 flex gap-2 overflow-x-auto bg-gray-50 border-t">
+                          {images.map((img, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setActiveImage(img)}
+                              className={`border rounded ${activeImage === img ? 'ring-2 ring-blue-500' : ''}`}
+                              title={`Imagen ${idx + 1}`}
+                            >
+                              <img src={getImageSrc(img)} alt={`Miniatura ${idx + 1}`} className="h-16 w-16 object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </aside>
                 </div>

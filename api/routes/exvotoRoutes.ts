@@ -9,4 +9,9 @@ router.post('/', exvotoController.create);
 router.put('/:id', exvotoController.update);
 router.delete('/:id', exvotoController.delete);
 
+// Imágenes adicionales
+router.post('/:id/images', exvotoController.addImages);
+router.get('/:id/images', exvotoController.getImages);
+router.delete('/:id/images/:imageId', exvotoController.deleteImage);
+
 export default router;
