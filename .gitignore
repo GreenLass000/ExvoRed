@@ -32,7 +32,7 @@ api/db/database.db-wal
 api/db/database.db-shm
 
 Drizzle kit generated files
-api/db/migrations/
+# api/db/migrations/
 api/db/backups
 
 backups/
