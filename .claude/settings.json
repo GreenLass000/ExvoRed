@@ -1,0 +1,20 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          { "type": "command", "command": "python3 - << 'PY'\nimport json,sys\nreq=json.load(sys.stdin)\np=req.get('tool_input',{}).get('file_path','')\nban=['.env','/node_modules/','.git/']\nraise SystemExit(2) if any(b in p for b in ban) else None\nPY" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "FILE=$(jq -r '.tool_input.file_path'); case \"$FILE\" in *.md) npx --yes markdownlint-cli2-fix \"$FILE\" || true ;; esac" }
+        ]
+      }
+    ]
+  }
+}

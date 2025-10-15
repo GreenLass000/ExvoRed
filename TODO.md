@@ -1,118 +1,165 @@
-# ExvoRed • Roadmap y TODO
+# MEJORAS Y MODIFICACIONES EXVORED
 
-Mantén un registro claro del progreso. Marca con [x] lo completado.
+## COSAS GENERALES
 
-- Leyenda: [ ] Por hacer • [x] Hecho
-- Consejos: agrupa tareas por PRs pequeñas y añade la referencia del issue/PR al lado si aplica.
+- **Buscador por palabras clave:**  
+  Que aparezca la lista completa de los resultados para poder buscar en contexto.  
+  La palabra buscada debe aparecer **subrayada dentro de la frase**, al estilo Word.
 
-## 📚 Índice
-- [🆕 Añadidos](#-añadidos)
-- [🛠️ Arreglos](#️-arreglos)
-- [🧾 Tabla Exvoto](#-tabla-exvoto)
-- [🏛️ Tabla SEM](#️-tabla-sem)
-- [📗 Tabla Catálogo](#-tabla-catálogo)
-- [✨ Mejoras](#-mejoras)
+- **Evitar pérdida de datos:**  
+  Si al añadir un nuevo exvoto, SEM, etc., se pincha fuera del cuadro sin guardar, se borra todo.  
+  → Evitar esto de alguna manera.
 
----
+- **Inspeccionar (“i”):**  
+  Que la ficha se abra en otra pestaña distinta o al menos dé la opción.  
+  (Mismo comportamiento para las imágenes).
 
-## 🆕 Añadidos
+- **Navegación entre fichas:**  
+  Que se pueda pasar a la ficha anterior o siguiente con flechas.
 
-- [x] **Nueva tabla en la base de datos: DIVINIDADES**, con campos:
-  - [x] Nombre
-  - [x] Atributos / Especialidad
-  - [x] Historia
-  - [x] Representación
-  - [x] Imagen de representación
-  - [x] Comentarios
-  - [x] Página de gestión de divinidades completamente funcional
+- **Numeración de filas:**  
+  Que las filas estén numeradas como en Excel.
 
-- [x] **Buscador avanzado en todas las páginas**: 
-  - [x] Búsqueda en tiempo real con normalización de texto (sin acentos, case-insensitive)
-  - [x] Contador de coincidencias ("X de Y resultados")
-  - [x] Navegación entre resultados con botones anterior/siguiente
-  - [x] Resaltado en amarillo de términos buscados en las tablas
-  - [x] Búsqueda en columnas relacionadas (ej: nombres de SEMs en tabla exvotos)
-  - [x] Componente SearchBar reutilizable implementado
-  - [x] Integrado en: ExvotoPage, SemPage, CatalogPage, DivinitiesPage, CharactersPage, MiraclesPage
+- **Cuadros flotantes:**  
+  No se leen bien. Sería mejor un cuadro más grande para leer más texto de un vistazo.
 
-- [ ] Modo "Excel":
-  - [x] Movimiento estilo Excel
-  - [x] Slider horizontal para columnas fuera de la pantalla
-  - [x] Poder ocultar columnas
-  - [x] Cambiar tamaño de columna
-  - [ ] Filtro asc/desc en cabecera (como Explorador de Windows)
-  - [ ] Si el texto de una celda se desborda, truncar y al pulsar ENTER mostrar en modal; ESCAPE cierra el modal
-  - [x] Reordenar columnas
-  - [ ] Cambiar color de celdas
-  - [ ] Filtros de ordenación:
-    - [ ] A-Z
-    - [ ] Mayor a menor
-    - [ ] Menor a mayor
-    - [ ] Último modificado
-    - [ ] Filtrar por provincia
-    - [ ] Filtrar por épocas
+- **Errores detectados:**
+  - No se pueden borrar filas.  
+  - No se pueden borrar ni editar milagros o personajes.  
+  - Los elementos (exvotos, catálogos, etc.) aparecen desordenados incluso con filtro.
 
-- [x] Keybinds:
-  - [x] e → edit field
-  - [x] d → details (deprecated - use 'i')
-  - [x] E → edit row (Shift+E from details pages)
-  - [x] i → inspect (navega a detalles vinculados y referencias de FK)
-  - [x] p → print (solo en detalles)
+- **Copiar filas completas:**  
+  Sería útil poder seleccionar/copiar filas enteras para duplicar datos similares.
 
-- [ ] Exportar a CSV o Excel
+- **Copiar/pegar con teclado:**  
+  Permitir `Ctrl + C` y `Ctrl + V` en celdas.
 
 ---
 
-## 🛠️ Arreglos
+## ATAJOS
 
-- [ ] Las fechas deben escribirse a mano; no usar input type="date"
-- [x] **En tabla Exvotos, añadir columna Época con intervalos de 25 años**:
-  - [x] Componente EpochSelector con navegación por siglos (XIII-XXI)
-  - [x] Intervalos de 25 años automáticos (1301-1325, 1326-1350, etc.)
-  - [x] Navegación entre siglos con botones anterior/siguiente
-  - [x] Cálculo automático de época basado en fecha del exvoto
-  - [x] Utilidades para validación y cálculo de épocas
-  - [x] Integrado en formulario de exvotos
-- [ ] Quitar columna de acciones
+- **Error:**  
+  La tecla “e” abre en modo lectura en SEM, Catálogos y Divinidades (solo funciona en Exvotos).
 
----
+- **Cambiar:**  
+  Al hacer doble clic en una celda debe abrir en modo **editar**, no “ver”.
 
-## 🧾 Tabla Exvoto
+- **Navegación con teclado:**  
+  Poder moverse entre campos con flechas (↑ ↓ ← →) al crear nuevos registros.
 
-- [ ] En la página de detalles, el título debe ser el ID interno del exvoto
-- [ ] La página de detalle debe permitir editar (eliminar modal separado de edición; edición inline en detalle)
-- [ ] Añadir imagen lateral fija en el modal de detalles; al hacer clic ampliar
-- [ ] Permitir varias imágenes (mostrarlas una debajo de otra)
-- [ ] En Transcripción e Información adicional, permitir texto decorado (rich text)
-- [ ] Mini-buscador en cada desplegable
-- [ ] Añadir columna de catálogo(s) en el que está el exvoto (pueden ser varios)
-- [ ] Añadir columna Tipo de consulta con opciones: Trabajo de campo, Bibliografía
-- [ ] Botón “+” en SEM para crear nuevo SEM desde “Añadir Exvoto” sin salir
-- [ ] Opción “Desaparecido” en el desplegable de SEM Conservación
-- [ ] “SEM origen” no es un SEM; debe ser texto “Lugar de Origen”
-- [ ] Género con opciones: Masculino, Femenino, Ambos, Desconocido
+- **Error:**  
+  Tras “Inspeccionar”, la mayoría de los atajos dejan de funcionar (excepto `Shift + e`).
 
 ---
 
-## 🏛️ Tabla SEM
+## EXVOTOS
 
-- [ ] Divinidad asociada: desplegable multiopción con divinidades correspondientes
-- [ ] Arreglar “Exvoto más antiguo” y “más reciente” (actualmente no se muestran)
-- [ ] En detalles de SEM, listar todos los exvotos del SEM y enlazar a sus detalles
-- [ ] En Referencias, permitir añadir catálogos vinculados (no solo texto libre)
+- **Nueva celda:**  
+  Añadir campo `Referencias` (texto) para bibliografía específica.  
+  → Vincular a la tabla **Catálogos** (que al pinchar lleve al catálogo concreto).
+
+- **Vinculación:**  
+  Con la tabla de **Divinidades**.
+
+- **Orden de columnas:**
+  - La columna **Imagen** debe ir al final.
+  - La columna **Lugar de origen** debe ir entre “Estatus social” y “Milagro”.
+
+- **Errores y mejoras:**
+  - En modo visualización, algunas celdas muestran números en lugar de texto (SEM ofrenda, SEM conservación, Imagen).  
+  - Al pinchar en esas celdas debería llevar a su ficha SEM (en nueva pestaña).
+  - El filtro “más antiguo (modif.)” no funciona bien.
+  - Diferencia de fechas entre tabla y ficha (la ficha muestra un día antes).
+
+- **Desde la ficha:**
+  - Poder añadir milagros y personajes nuevos directamente.
+  - Las opciones de SEM deben aparecer **ordenadas alfabéticamente** y ser **buscables**.
+  - La fecha debe poder escribirse manualmente (`AÑO-MES-DÍA`, ej. `1787-X-01`).
+
+- **Campos de texto (Información adicional, Forma de texto, Transcripción):**
+  - Soporte para párrafos, negritas, subrayados, justificación.
+  - En “Transcripción”, permitir **superíndices** (ejemplo de exvoto transcrito incluido en el documento original).
+
+- **Campo “Género”:**
+  - Añadir opciones: `Ambos`, `Desconocido`.  
+  - Eliminar `Otro`.
+
+- **Imágenes:**
+  - Ampliar en pestaña nueva.  
+  - Opción para descargar.  
+  - Zoom con la rueda del ratón.  
+  - Si hay varias, poder pasar entre ellas.  
+  - Añadir notas o subtítulos a la imagen (fuente, procedencia…).
+
+- **Reorganización visual de la ficha:**
+
+  1. **Ubicación:** Lugar de ofrenda + lugar de conservación + provincia.  
+     - “Lugar de origen del milagro” pasa a “Personas involucradas” como “Lugar de origen devoto/a”.
+
+  2. **Detalles del Milagro:**  
+     - Fecha `AÑO/MES/DÍA`  
+     - La provincia va en “Ubicación”.
+
+  3. **Personas involucradas:**  
+     - Añadir “Personajes representados”.  
+     - Añadir “Lugar de origen devoto/a”.
+
+  4. **Descripción del Exvoto:**  
+     - Orden: Material → Estado → Forma del texto → Uso de mayúsculas.  
+     - Quitar “Personajes representados”.
+
+  5. **Transcripción**  
+  6. **Información Adicional**  
+  7. **Referencias (nuevo):**  
+     - Vincular con catálogos + texto libre.
+
+- **Importante:**  
+  Cuando una ficha está en modo visualización, los campos vacíos no deben desaparecer.  
+  Deben aparecer vacíos explícitamente.
 
 ---
 
-## 📗 Tabla Catálogo
+## SEM
 
-- [ ] Quitar columna “Lugar de publicación”
-- [ ] “Número de exvotos” será editable manualmente (no autogenerado)
-- [ ] “Descripción de la ubicación” → “Descripción” con texto decorado
-- [ ] “Provincias relacionadas” no funciona (corregir)
+- Vincular con **Divinidades** (puede haber más de una).  
+- **Error:** No deja añadir exvotos conservados en cada SEM.  
+  → Igual que desde exvoto se puede crear SEM, desde SEM se debería poder crear exvoto.  
+- Mostrar la lista de exvotos vinculados.  
+- Permitir añadir imágenes.
 
 ---
 
-## ✨ Mejoras
+## CATÁLOGOS
 
-- [ ] Todo ordenado alfabéticamente por defecto
-- [ ] Que se vean todas las columnas de la tabla
+- **Eliminar:** Campo “Lugar de publicación”.  
+  → Sustituir por “Lugares relacionados” (texto libre).
+
+- **Errores:**
+  - El campo “Nº de Exvotos” no se guarda.  
+  - “Descripción de la ubicación” → cambiar a “Descripción” (texto libre con formato).  
+  - En celdas de texto: permitir **negrita**, **cursiva**, etc., visibles también en los cuadros flotantes.
+  - Aparecen duplicadas las casillas “Nº de Exvotos” y “Nº Total Exvotos”.
+  - “Lugares relacionados” no se guarda.  
+    → Renombrar a “SEM incluidos en el catálogo”.  
+    → No está bien vinculado a SEM.  
+  - No aparecen automáticamente las provincias catalogadas.
+
+- **Nota:**  
+  No siempre tiene sentido vincular SEM ↔ Catálogo (algunos son demasiado amplios o mezclan casos).
+
+---
+
+## DIVINIDADES
+
+- **SEM en los que se le da culto:**  
+  Añadirlo a la tabla. Una misma divinidad puede aparecer en varios SEM.
+
+- **Imágenes:**  
+  No permite añadir JPG (debería permitir varias fotos).
+
+- **Errores:**
+  - La tecla “e” abre en modo lectura (no editable).  
+  - La tecla “i” no funciona (no abre detalles).
+
+---
+
