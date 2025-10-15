@@ -1,0 +1,239 @@
+{
+  "items": [
+    {
+      "slug": "fix-delete-operations",
+      "title": "Fix Missing Delete Functionality",
+      "areas": ["api", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "prevent-data-loss-on-modal-close",
+      "title": "Prevent Data Loss When Clicking Outside Modal",
+      "areas": ["ux", "tests", "risk"]
+    },
+    {
+      "slug": "fix-keyboard-shortcuts-consistency",
+      "title": "Fix Keyboard Shortcuts Across All Entities",
+      "areas": ["ux", "tests", "risk"]
+    },
+    {
+      "slug": "fix-exvoto-date-discrepancy",
+      "title": "Fix Date Display Discrepancy Between Table and Detail View",
+      "areas": ["api", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "fix-catalog-fields-not-saving",
+      "title": "Fix Catalog Fields Not Persisting",
+      "areas": ["api", "data", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "link-exvotos-divinities",
+      "title": "Link Exvotos with Divinities Table",
+      "areas": ["api", "data", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "link-sems-divinities",
+      "title": "Complete SEM↔Divinity Relationship",
+      "areas": ["api", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "fix-oldest-modified-filter",
+      "title": "Fix 'Oldest Modified' Filter Not Working",
+      "areas": ["api", "data", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "improve-search-context-display",
+      "title": "Improve Search with Full Context Display",
+      "areas": ["ux", "tests", "risk"]
+    },
+    {
+      "slug": "open-inspect-in-new-tab",
+      "title": "Allow Inspect (i) to Open in New Tab",
+      "areas": ["ux", "tests", "risk"]
+    },
+    {
+      "slug": "arrow-navigation-between-records",
+      "title": "Navigate Between Record Detail Pages with Arrows",
+      "areas": ["api", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "add-row-numbering",
+      "title": "Add Excel-Style Row Numbering",
+      "areas": ["ux", "tests"]
+    },
+    {
+      "slug": "improve-floating-boxes-readability",
+      "title": "Improve Floating Cell Preview Boxes",
+      "areas": ["ux", "tests", "risk"]
+    },
+    {
+      "slug": "copy-paste-keyboard-support",
+      "title": "Enable Ctrl+C / Ctrl+V in Cells",
+      "areas": ["ux", "tests", "risk"]
+    },
+    {
+      "slug": "copy-entire-rows",
+      "title": "Enable Copying Entire Rows for Duplication",
+      "areas": ["ux", "tests", "risk"]
+    },
+    {
+      "slug": "double-click-edit-mode",
+      "title": "Double-Click Cell Opens Edit Mode (Not View Mode)",
+      "areas": ["ux", "tests", "risk"]
+    },
+    {
+      "slug": "keyboard-navigation-new-records",
+      "title": "Arrow Key Navigation When Creating Records",
+      "areas": ["ux", "tests", "risk"]
+    },
+    {
+      "slug": "add-exvoto-references-field",
+      "title": "Add References Field to Exvotos",
+      "areas": ["api", "data", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "reorder-exvoto-columns",
+      "title": "Reorder Exvoto Table Columns",
+      "areas": ["ux", "tests"]
+    },
+    {
+      "slug": "fix-exvoto-cell-display-ids",
+      "title": "Display Names Instead of IDs in Exvoto View Mode",
+      "areas": ["api", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "add-miracles-characters-from-exvoto-form",
+      "title": "Create Miracles/Characters Directly from Exvoto Form",
+      "areas": ["ux", "tests", "risk"]
+    },
+    {
+      "slug": "alphabetical-searchable-sem-dropdowns",
+      "title": "Make SEM Dropdowns Alphabetical and Searchable",
+      "areas": ["api", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "manual-date-entry-with-partial-dates",
+      "title": "Enable Manual Date Entry with Unknown Month/Day Support",
+      "areas": ["api", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "add-exvoto-gender-options",
+      "title": "Update Exvoto Gender Field Options",
+      "areas": ["api", "data", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "reorganize-exvoto-detail-sections",
+      "title": "Reorganize Exvoto Detail Page Sections",
+      "areas": ["ux", "tests"]
+    },
+    {
+      "slug": "show-empty-fields-in-view-mode",
+      "title": "Display Empty Fields in View Mode",
+      "areas": ["ux", "tests"]
+    },
+    {
+      "slug": "add-sem-create-exvoto",
+      "title": "Allow Creating Exvotos from SEM Detail Page",
+      "areas": ["ux", "tests"]
+    },
+    {
+      "slug": "show-linked-exvotos-in-sem",
+      "title": "Display List of Linked Exvotos in SEM Detail",
+      "areas": ["api", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "add-sem-images",
+      "title": "Enable Image Uploads for SEMs",
+      "areas": ["api", "data", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "catalog-remove-publication-place",
+      "title": "Replace Publication Place with Related Places in Catalogs",
+      "areas": ["api", "data", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "catalog-rename-description-field",
+      "title": "Rename and Enhance Catalog Description Field",
+      "areas": ["api", "data", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "catalog-remove-duplicate-exvoto-count",
+      "title": "Remove Duplicate Exvoto Count Fields",
+      "areas": ["api", "data", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "catalog-fix-sem-relationship",
+      "title": "Fix SEM Relationship in Catalogs",
+      "areas": ["api", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "catalog-auto-populate-provinces",
+      "title": "Auto-Populate Provinces in Catalogs",
+      "areas": ["api", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "divinity-add-sem-list",
+      "title": "Display SEM Worship List in Divinity Table",
+      "areas": ["api", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "divinity-allow-multiple-images",
+      "title": "Enable Multiple Image Uploads for Divinities",
+      "areas": ["api", "data", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "divinity-fix-keyboard-shortcuts",
+      "title": "Fix Divinity Keyboard Shortcuts (e, i)",
+      "areas": ["ux", "tests"]
+    },
+    {
+      "slug": "rich-text-editor-for-long-fields",
+      "title": "Implement Rich Text Editing for Long-Form Fields",
+      "areas": ["api", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "enhanced-image-viewer",
+      "title": "Implement Enhanced Image Viewer",
+      "areas": ["api", "data", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "table-sorting-headers",
+      "title": "Add Sortable Column Headers",
+      "areas": ["api", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "csv-excel-export",
+      "title": "Implement CSV/Excel Export",
+      "areas": ["api", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "cell-overflow-truncation",
+      "title": "Handle Cell Text Overflow with Truncation",
+      "areas": ["ux", "tests", "risk"]
+    },
+    {
+      "slug": "cell-color-customization",
+      "title": "Enable Cell Background Color Customization",
+      "areas": ["api", "data", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "advanced-filtering-by-province-epoch",
+      "title": "Implement Advanced Filtering",
+      "areas": ["api", "data", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "disappearance-status-for-sems",
+      "title": "Add 'Desaparecido' Status for SEMs",
+      "areas": ["api", "data", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "linked-catalog-references",
+      "title": "Implement Linked Catalog References",
+      "areas": ["api", "data", "ux", "tests", "risk"]
+    },
+    {
+      "slug": "mini-search-in-dropdowns",
+      "title": "Add Search Functionality to Dropdown Selects",
+      "areas": ["api", "ux", "tests", "risk"]
+    }
+  ]
+}

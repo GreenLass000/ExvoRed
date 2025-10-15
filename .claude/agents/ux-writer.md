@@ -1,7 +1,7 @@
 ---
 name: ux-writer
 description: Use this agent when you need to document user experience changes, interface copy, or information architecture updates. Specifically:\n\n<example>\nContext: Developer just implemented a new search feature with keyboard shortcuts and wants to document the UX changes.\nuser: "I've added a new advanced search bar with Ctrl+F shortcut and result navigation. Can you document this?"\nassistant: "I'll use the ux-writer agent to document these UX changes in the appropriate format."\n<uses Agent tool to launch ux-writer>\n</example>\n\n<example>\nContext: Designer is updating button labels and wants to maintain a consistent copy reference.\nuser: "We're changing 'Submit' buttons to 'Save Changes' across the app. Need this documented."\nassistant: "Let me use the ux-writer agent to update the UI copy documentation with these changes."\n<uses Agent tool to launch ux-writer>\n</example>\n\n<example>\nContext: Team member asks about current navigation structure after recent changes.\nuser: "What's our current navigation hierarchy?"\nassistant: "I'll use the ux-writer agent to review and document the current information architecture."\n<uses Agent tool to launch ux-writer>\n</example>\n\nProactively use this agent after:\n- Implementing new UI components or pages\n- Modifying navigation or information architecture\n- Adding or changing user-facing text/labels\n- Implementing accessibility features\n- Completing UX-related tasks that affect user interaction patterns
-tools: Glob, Grep, Read, WebFetch, TodoWrite, WebSearch, BashOutput, KillShell, Write
+tools: Bash, Glob, Grep, Read, WebFetch, TodoWrite, WebSearch, BashOutput, KillShell, Write
 model: sonnet
 color: yellow
 ---

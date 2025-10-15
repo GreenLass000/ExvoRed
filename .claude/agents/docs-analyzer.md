@@ -1,7 +1,7 @@
 ---
 name: docs-analyzer
 description: Use this agent when the user needs to analyze and normalize TODO.md files into structured documentation. Specifically:\n\n<example>\nContext: User has updated their TODO.md with new features and wants to generate a structured plan.\nuser: "I've updated the TODO.md with new requirements. Can you analyze it and create the documentation?"\nassistant: "I'll use the docs-analyzer agent to read your TODO.md and generate a normalized plan with slugs."\n<uses Agent tool to launch docs-analyzer>\n</example>\n\n<example>\nContext: User is starting a new development cycle and wants to organize their backlog.\nuser: "Let's organize the TODO items into a proper plan before we start coding"\nassistant: "I'll launch the docs-analyzer agent to process your TODO.md and create a prioritized plan with stable slugs for tracking."\n<uses Agent tool to launch docs-analyzer>\n</example>\n\n<example>\nContext: User mentions TODO.md in their request about planning.\nuser: "Can you help me understand what's in the TODO.md and create a better structure?"\nassistant: "I'll use the docs-analyzer agent to analyze your TODO.md and generate structured documentation."\n<uses Agent tool to launch docs-analyzer>\n</example>\n\nUse this agent proactively when:\n- The user mentions TODO.md or task planning\n- The user asks to organize, prioritize, or structure their backlog\n- The user needs to generate documentation from their TODO list\n- The user wants to create slugs or identifiers for tracking work items
-tools: Glob, Grep, Read, WebFetch, TodoWrite, WebSearch, BashOutput, KillShell, Write
+tools: Bash, Glob, Grep, Read, WebFetch, TodoWrite, WebSearch, BashOutput, KillShell, Write
 model: sonnet
 color: green
 ---
