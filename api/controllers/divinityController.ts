@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { eq } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { divinity } from '../db/schema.js';
+import { divinity, divinitySem } from '../db/schema.js';
 
 export const divinityController = {
   // GET /api/divinities - Obtener todas las divinidades
@@ -101,6 +101,11 @@ export const divinityController = {
   async delete(req: Request, res: Response) {
     try {
       const id = parseInt(req.params.id);
+      // Block deletion if referenced by SEMs
+      const refs = await db.select().from(divinitySem).where(eq(divinitySem.divinity_id, id));
+      if (refs.length > 0) {
+        return res.status(409).json({ error: 'Cannot delete divinity because it is referenced by one or more SEMs.' });
+      }
       const result = await db.delete(divinity)
         .where(eq(divinity.id, id))
         .returning();

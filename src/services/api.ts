@@ -137,6 +137,19 @@ export const createCharacter = (name: string): Promise<Character> => {
     });
 };
 
+export const updateCharacter = (id: number, name: string): Promise<Character> => {
+    return apiCall<Character>(`/characters/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name }),
+    });
+};
+
+export const deleteCharacter = (id: number): Promise<{ message: string }> => {
+    return apiCall<{ message: string }>(`/characters/${id}`, {
+        method: 'DELETE',
+    });
+};
+
 // --- MIRACLE API ---
 export const getMiracles = (): Promise<Miracle[]> => {
     return apiCall<Miracle[]>('/miracles');
@@ -146,6 +159,19 @@ export const createMiracle = (name: string): Promise<Miracle> => {
     return apiCall<Miracle>('/miracles', {
         method: 'POST',
         body: JSON.stringify({ name }),
+    });
+};
+
+export const updateMiracle = (id: number, name: string): Promise<Miracle> => {
+    return apiCall<Miracle>(`/miracles/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name }),
+    });
+};
+
+export const deleteMiracle = (id: number): Promise<{ message: string }> => {
+    return apiCall<{ message: string }>(`/miracles/${id}`, {
+        method: 'DELETE',
     });
 };
 

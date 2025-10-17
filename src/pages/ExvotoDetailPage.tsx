@@ -1,19 +1,17 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Exvoto, Sem, ExvotoImage as ExvotoImageType } from '../types';
 import * as api from '../services/api';
 import { getImageSrc } from '../utils/images';
 import Modal from '../components/Modal';
 
 const DetailField = ({ label, value }: { label: string, value: React.ReactNode }) => {
-    if (value === null || value === undefined || value === '') {
-        return null;
-    }
+    const isEmpty = value === null || value === undefined || value === '';
     return (
         <div>
             <dt className="text-sm font-medium text-slate-500">{label}</dt>
-            <dd className="mt-1 text-base text-slate-900">{value}</dd>
+            <dd className="mt-1 text-base text-slate-900">{isEmpty ? <span className="text-slate-400">—</span> : value}</dd>
         </div>
     );
 };
@@ -123,25 +121,41 @@ const ExvotoDetailPage: React.FC = () => {
     }
 
     const formatDate = (dateString: string | null) => {
-        if (!dateString) return 'N/A';
-        return new Date(dateString).toLocaleDateString('es-ES', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
+        if (!dateString) return '—';
+        return dateString; // Preserve exact string; avoid timezone shifts
     }
 
     return (
         <div className="bg-white shadow-xl rounded-lg overflow-hidden max-w-6xl mx-auto">
             <div className="p-6 sm:p-8">
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start gap-4">
                     <div>
-<h1 className="text-3xl font-bold text-slate-800">{exvoto.internal_id || 'N/A'}</h1>
+                        <h1 className="text-3xl font-bold text-slate-800">{exvoto.internal_id || 'N/A'}</h1>
                         <p className="text-md text-slate-500 mt-1">Virgen/Santo: {exvoto.virgin_or_saint || 'N/A'}</p>
                     </div>
-                     <Link to="/exvotos" className="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 transition-colors text-sm font-medium">
-                        &larr; Volver a la lista
-                    </Link>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+                            onClick={async () => {
+                                const ok = window.confirm('¿Eliminar este exvoto? Esta acción no se puede deshacer.');
+                                if (!ok || !exvoto) return;
+                                try {
+                                    await api.deleteExvoto(exvoto.id);
+                                    navigate('/exvotos');
+                                } catch (err) {
+                                    alert('No se pudo eliminar el exvoto');
+                                }
+                            }}
+                        >Eliminar</button>
+                        <button
+                            type="button"
+                            className="px-3 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 text-sm"
+                            onClick={() => navigate('/exvotos')}
+                        >
+                            &larr; Volver a la lista
+                        </button>
+                    </div>
                 </div>
                 
                 {/* Contenido principal en dos zonas: detalles (2/3) e imagen (1/3) */}

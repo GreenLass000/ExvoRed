@@ -15,6 +15,7 @@ const CharactersPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newCharacter, setNewCharacter] = useState('');
+    const [hasUnsaved, setHasUnsaved] = useState(false);
 
     // Atajo 'n' para crear nuevo personaje
     useNewShortcut({ isModalOpen, onNew: () => handleOpenModal() });
@@ -83,11 +84,13 @@ const CharactersPage: React.FC = () => {
     const handleOpenModal = () => {
         setNewCharacter('');
         setIsModalOpen(true);
+        setHasUnsaved(false);
     };
 
     const handleModalClose = () => {
         setIsModalOpen(false);
         setNewCharacter('');
+        setHasUnsaved(false);
     };
 
     const handleFormSubmit = async (e: React.FormEvent) => {
@@ -155,7 +158,7 @@ const CharactersPage: React.FC = () => {
                 </div>
             </div>
 
-            <Modal isOpen={isModalOpen} onClose={handleModalClose} title="Añadir Nuevo Personaje">
+            <Modal isOpen={isModalOpen} onClose={handleModalClose} title="Añadir Nuevo Personaje" shouldConfirmOnClose hasUnsavedChanges={hasUnsaved} confirmMessage="Tienes cambios sin guardar. ¿Descartarlos?">
                 <form onSubmit={handleFormSubmit}>
                     <div className="mb-4">
                         <label htmlFor="character" className="block text-sm font-medium text-slate-700 mb-2">
@@ -165,7 +168,7 @@ const CharactersPage: React.FC = () => {
                             type="text"
                             id="character"
                             value={newCharacter}
-                            onChange={(e) => setNewCharacter(e.target.value)}
+                            onChange={(e) => { setNewCharacter(e.target.value); setHasUnsaved(true); }}
                             className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                             placeholder="Ej: Virgen María, San José, etc."
                             required
@@ -198,9 +201,24 @@ const CharactersPage: React.FC = () => {
                     </div>
                 )}
                 {filteredCharacters.length > 0 ? (
-                    <ul className="list-disc list-inside space-y-2">
+                    <ul className="space-y-2">
                         {filteredCharacters.map((character) => (
-                            <li key={character.id} className="text-slate-800">{character.name}</li>
+                            <li key={character.id} className="flex items-center justify-between text-slate-800 bg-white border rounded px-3 py-2">
+                                <span>{character.name}</span>
+                                <button
+                                  className="text-red-600 hover:text-red-800 text-sm"
+                                  onClick={async () => {
+                                    const ok = confirm('¿Eliminar este personaje?');
+                                    if (!ok) return;
+                                    try {
+                                      await api.deleteCharacter(character.id);
+                                      await fetchData();
+                                    } catch (err) {
+                                      console.error('Error deleting character:', err);
+                                    }
+                                  }}
+                                >Eliminar</button>
+                            </li>
                         ))}
                     </ul>
                 ) : (

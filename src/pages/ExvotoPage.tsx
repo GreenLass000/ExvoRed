@@ -57,6 +57,7 @@ const ExvotoPage: React.FC = () => {
   const [editingExvoto, setEditingExvoto] = useState<Exvoto | null>(null);
   const [newExvotoData, setNewExvotoData] = useState<Omit<Exvoto, 'id'>>(getInitialExvotoData());
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [hasUnsaved, setHasUnsaved] = useState(false);
 
   // Modal rápido para crear SEM desde el formulario de Exvoto
   const [isSemModalOpen, setIsSemModalOpen] = useState(false);
@@ -216,6 +217,7 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
     setEditingExvoto(null);
     setNewExvotoData(getInitialExvotoData());
     setIsModalOpen(true);
+    setHasUnsaved(false);
   };
 
   const handleEditExvoto = (id: number) => {
@@ -231,6 +233,7 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
   const handleModalClose = () => {
     setIsModalOpen(false);
     setEditingExvoto(null);
+    setHasUnsaved(false);
   };
 
   const handleFormChange = (e: React.ChangeEvent<any>) => {
@@ -246,6 +249,7 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
     }
     
     setNewExvotoData(updatedData);
+    setHasUnsaved(true);
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -407,7 +411,14 @@ return (
         />
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={handleModalClose} title={editingExvoto ? 'Editar Exvoto' : 'Añadir Nuevo Exvoto'}>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        title={editingExvoto ? 'Editar Exvoto' : 'Añadir Nuevo Exvoto'}
+        shouldConfirmOnClose
+        hasUnsavedChanges={hasUnsaved}
+        confirmMessage="Tienes cambios sin guardar. ¿Descartarlos?"
+      >
         <form onSubmit={handleFormSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {renderFormField('ID Interno', 'internal_id')}
@@ -416,14 +427,15 @@ return (
             {renderFormField('SEM Conservación', 'conservation_sem_id', 'select', sems.map(s => ({ value: s.id, label: s.name || `SEM #${s.id}` })))}
             {renderFormField('Provincia', 'province')}
             {renderFormField('Virgen o Santo', 'virgin_or_saint')}
-            {renderFormField('Fecha Exvoto', 'exvoto_date', 'date')}
+            {renderFormField('Fecha Exvoto', 'exvoto_date', 'text')}
             {renderFormField('Época (25 años)', 'epoch', 'epoch')}
             {renderFormField('Nombre Beneficiado', 'benefited_name')}
             {renderFormField('Nombre Oferente', 'offerer_name')}
             {renderFormField('Género Oferente', 'offerer_gender', 'select', [
               { value: 'Masculino', label: 'Masculino' },
               { value: 'Femenino', label: 'Femenino' },
-              { value: 'Otro', label: 'Otro' }
+              { value: 'Ambos', label: 'Ambos' },
+              { value: 'Desconocido', label: 'Desconocido' }
             ])}
             {renderFormField('Relación Oferente', 'offerer_relation')}
             {renderFormField('Personajes', 'characters', 'tagselect')}

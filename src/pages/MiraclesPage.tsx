@@ -14,6 +14,7 @@ const MiraclesPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newMiracle, setNewMiracle] = useState('');
+    const [hasUnsaved, setHasUnsaved] = useState(false);
 
     // Atajo 'n' para crear nuevo milagro
     useNewShortcut({ isModalOpen, onNew: () => handleOpenModal() });
@@ -82,11 +83,13 @@ const MiraclesPage: React.FC = () => {
     const handleOpenModal = () => {
         setNewMiracle('');
         setIsModalOpen(true);
+        setHasUnsaved(false);
     };
 
     const handleModalClose = () => {
         setIsModalOpen(false);
         setNewMiracle('');
+        setHasUnsaved(false);
     };
 
     const handleFormSubmit = async (e: React.FormEvent) => {
@@ -154,7 +157,7 @@ const MiraclesPage: React.FC = () => {
                 </div>
             </div>
 
-            <Modal isOpen={isModalOpen} onClose={handleModalClose} title="Añadir Nuevo Milagro">
+            <Modal isOpen={isModalOpen} onClose={handleModalClose} title="Añadir Nuevo Milagro" shouldConfirmOnClose hasUnsavedChanges={hasUnsaved} confirmMessage="Tienes cambios sin guardar. ¿Descartarlos?">
                 <form onSubmit={handleFormSubmit}>
                     <div className="mb-4">
                         <label htmlFor="miracle" className="block text-sm font-medium text-slate-700 mb-2">
@@ -164,7 +167,7 @@ const MiraclesPage: React.FC = () => {
                             type="text"
                             id="miracle"
                             value={newMiracle}
-                            onChange={(e) => setNewMiracle(e.target.value)}
+                            onChange={(e) => { setNewMiracle(e.target.value); setHasUnsaved(true); }}
                             className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                             placeholder="Ej: Curación de enfermedad, Protección, etc."
                             required
@@ -197,9 +200,24 @@ const MiraclesPage: React.FC = () => {
                     </div>
                 )}
                 {filteredMiracles.length > 0 ? (
-                    <ul className="list-disc list-inside space-y-2">
+                    <ul className="space-y-2">
                         {filteredMiracles.map((miracle) => (
-                            <li key={miracle.id} className="text-slate-800">{miracle.name}</li>
+                            <li key={miracle.id} className="flex items-center justify-between text-slate-800 bg-white border rounded px-3 py-2">
+                                <span>{miracle.name}</span>
+                                <button
+                                  className="text-red-600 hover:text-red-800 text-sm"
+                                  onClick={async () => {
+                                    const ok = confirm('¿Eliminar este milagro?');
+                                    if (!ok) return;
+                                    try {
+                                      await api.deleteMiracle(miracle.id);
+                                      await fetchData();
+                                    } catch (err) {
+                                      console.error('Error deleting miracle:', err);
+                                    }
+                                  }}
+                                >Eliminar</button>
+                            </li>
                         ))}
                     </ul>
                 ) : (

@@ -53,6 +53,7 @@ const CatalogPage: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCatalog, setEditingCatalog] = useState<Catalog | null>(null);
     const [newCatalogData, setNewCatalogData] = useState<Omit<Catalog, 'id'>>(getInitialCatalogData());
+    const [hasUnsaved, setHasUnsaved] = useState(false);
 
     // Atajo 'n' para crear nuevo catálogo
     useNewShortcut({ isModalOpen, onNew: () => handleOpenModal() });
@@ -137,6 +138,7 @@ const CatalogPage: React.FC = () => {
         setEditingCatalog(null);
         setNewCatalogData(getInitialCatalogData());
         setIsModalOpen(true);
+        setHasUnsaved(false);
     };
 
     const handleEditCatalog = (id: number) => {
@@ -159,12 +161,14 @@ const CatalogPage: React.FC = () => {
                 comments: catalog.comments
             });
             setIsModalOpen(true);
+            setHasUnsaved(false);
         }
     };
 
     const handleModalClose = () => {
         setIsModalOpen(false);
         setEditingCatalog(null);
+        setHasUnsaved(false);
     };
 
     const handleFormChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -180,6 +184,7 @@ const CatalogPage: React.FC = () => {
             ...prev,
             [name]: finalValue
         }));
+        setHasUnsaved(true);
     }, []);
 
     const handleFormSubmit = async (e: React.FormEvent) => {
@@ -279,7 +284,7 @@ const CatalogPage: React.FC = () => {
                 />
             </div>
 
-            <Modal isOpen={isModalOpen} onClose={handleModalClose} title={editingCatalog ? "Editar Catálogo" : "Añadir Nuevo Catálogo"}>
+            <Modal isOpen={isModalOpen} onClose={handleModalClose} title={editingCatalog ? "Editar Catálogo" : "Añadir Nuevo Catálogo"} shouldConfirmOnClose hasUnsavedChanges={hasUnsaved} confirmMessage="Tienes cambios sin guardar. ¿Descartarlos?">
                 <form onSubmit={handleFormSubmit}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {renderFormField('Título', 'title')}
@@ -289,8 +294,8 @@ const CatalogPage: React.FC = () => {
                         {renderFormField('Lugar de Publicación', 'publication_place')}
                         {renderFormField('Ubicación del Catálogo', 'catalog_location')}
                         {renderFormField('Número de Exvotos', 'exvoto_count', 'number')}
-                        {renderFormField('Fecha Más Antigua', 'oldest_exvoto_date', 'date')}
-                        {renderFormField('Fecha Más Reciente', 'newest_exvoto_date', 'date')}
+                        {renderFormField('Fecha Más Antigua (YYYY-MM-DD o X)', 'oldest_exvoto_date', 'text')}
+                        {renderFormField('Fecha Más Reciente (YYYY-MM-DD o X)', 'newest_exvoto_date', 'text')}
                         {renderFormField('Número Total Exvotos', 'numero_exvotos', 'number')}
                         <div className="md:col-span-2">
                             {renderFormField('Descripción de Ubicación', 'location_description', 'textarea')}
@@ -344,6 +349,7 @@ const CatalogPage: React.FC = () => {
                 blockNavigation={isModalOpen}
                 idField="id"
                 enableKeyboardNavigation={true}
+                onRowUpdate={handleUpdate}
                 className="mt-4"
             />
         </div>

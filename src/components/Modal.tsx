@@ -5,17 +5,28 @@ interface ModalProps {
     onClose: () => void;
     title: string;
     children: React.ReactNode;
+    shouldConfirmOnClose?: boolean;
+    hasUnsavedChanges?: boolean;
+    confirmMessage?: string;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, shouldConfirmOnClose = false, hasUnsavedChanges = false, confirmMessage }) => {
+    const attemptClose = useCallback(() => {
+        if (shouldConfirmOnClose && hasUnsavedChanges) {
+            const ok = window.confirm(confirmMessage || 'You have unsaved changes. Discard them?');
+            if (!ok) return;
+        }
+        onClose();
+    }, [shouldConfirmOnClose, hasUnsavedChanges, confirmMessage, onClose]);
+
     // Cerrar con Escape a nivel de documento (fiable aunque el foco esté en inputs)
     const handleDocumentKeyDown = useCallback((e: KeyboardEvent) => {
         if (e.key === 'Escape') {
             e.preventDefault();
             e.stopPropagation();
-            onClose();
+            attemptClose();
         }
-    }, [onClose]);
+    }, [attemptClose]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -29,13 +40,13 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
 
     const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
         if (e.target === e.currentTarget) {
-            onClose();
+            attemptClose();
         }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
         if (e.key === 'Escape') {
-            onClose();
+            attemptClose();
         }
     };
 
@@ -56,7 +67,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
                 <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white z-10">
                     <h2 className="text-xl font-semibold text-slate-700">{title}</h2>
                     <button
-                        onClick={onClose}
+                        onClick={attemptClose}
                         className="text-slate-400 hover:text-slate-600"
                         aria-label="Cerrar modal"
                     >

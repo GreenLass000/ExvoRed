@@ -35,6 +35,7 @@ const DivinitiesPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDivinity, setEditingDivinity] = useState<Divinity | null>(null);
   const [newDivinityData, setNewDivinityData] = useState<Omit<Divinity, 'id'>>(getInitialDivinityData());
+  const [hasUnsaved, setHasUnsaved] = useState(false);
 
   // Atajo 'n' para crear nueva divinidad
   useNewShortcut({ isModalOpen, onNew: () => handleOpenModal() });
@@ -104,6 +105,7 @@ const DivinitiesPage: React.FC = () => {
     setEditingDivinity(null);
     setNewDivinityData(getInitialDivinityData());
     setIsModalOpen(true);
+    setHasUnsaved(false);
   };
 
   const handleEditDivinity = (id: number) => {
@@ -113,17 +115,20 @@ const DivinitiesPage: React.FC = () => {
       setEditingDivinity(divinity);
       setNewDivinityData({ ...rest });
       setIsModalOpen(true);
+      setHasUnsaved(false);
     }
   };
 
   const handleModalClose = () => {
     setIsModalOpen(false);
     setEditingDivinity(null);
+    setHasUnsaved(false);
   };
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setNewDivinityData(prev => ({ ...prev, [name]: value === '' ? null : value }));
+    setHasUnsaved(true);
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -188,7 +193,7 @@ const DivinitiesPage: React.FC = () => {
         />
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={handleModalClose} title={editingDivinity ? 'Editar Divinidad' : 'Añadir Nueva Divinidad'}>
+      <Modal isOpen={isModalOpen} onClose={handleModalClose} title={editingDivinity ? 'Editar Divinidad' : 'Añadir Nueva Divinidad'} shouldConfirmOnClose hasUnsavedChanges={hasUnsaved} confirmMessage="Tienes cambios sin guardar. ¿Descartarlos?">
         <form onSubmit={handleFormSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -279,6 +284,7 @@ const DivinitiesPage: React.FC = () => {
         blockNavigation={isModalOpen}
         idField="id"
         enableKeyboardNavigation={true}
+        onRowUpdate={handleUpdate}
         className="mt-4"
       />
     </div>

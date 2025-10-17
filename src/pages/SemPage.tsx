@@ -53,6 +53,7 @@ const SemPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSem, setEditingSem] = useState<Sem | null>(null);
   const [newSemData, setNewSemData] = useState<Omit<Sem, 'id'>>(getInitialSemData());
+  const [hasUnsaved, setHasUnsaved] = useState(false);
 
   // Atajo 'n' para crear nuevo SEM
   useNewShortcut({ isModalOpen, onNew: () => handleOpenModal() });
@@ -99,6 +100,7 @@ const SemPage: React.FC = () => {
     setEditingSem(null);
     setNewSemData(getInitialSemData());
     setIsModalOpen(true);
+    setHasUnsaved(false);
   };
 
   const handleEditSem = (id: number) => {
@@ -114,11 +116,13 @@ const SemPage: React.FC = () => {
   const handleModalClose = () => {
     setIsModalOpen(false);
     setEditingSem(null);
+    setHasUnsaved(false);
   };
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setNewSemData(prev => ({ ...prev, [name]: value || null }));
+    setHasUnsaved(true);
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -221,7 +225,7 @@ const SemPage: React.FC = () => {
         />
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={handleModalClose} title={editingSem ? "Editar SEM" : "Añadir Nuevo SEM"}>
+      <Modal isOpen={isModalOpen} onClose={handleModalClose} title={editingSem ? "Editar SEM" : "Añadir Nuevo SEM"} shouldConfirmOnClose hasUnsavedChanges={hasUnsaved} confirmMessage="Tienes cambios sin guardar. ¿Descartarlos?">
         <form onSubmit={handleFormSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {renderFormField('Nombre', 'name')}
@@ -278,6 +282,7 @@ const SemPage: React.FC = () => {
         blockNavigation={isModalOpen}
         idField="id"
         enableKeyboardNavigation={true}
+        onRowUpdate={handleUpdate}
         className="mt-4"
       />
     </div>
