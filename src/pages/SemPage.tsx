@@ -1,9 +1,9 @@
 // Página SEM corregida: evita uso incorrecto de hooks y estabiliza renderizado
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ColumnDef } from '../components/DataTable';
-import { ExcelTable } from '../components/excel';
+import { ExcelTable, ExcelTableRef } from '../components/excel';
 import { PlusIcon } from '../components/icons';
 import Modal from '../components/Modal';
 import SearchBar from '../components/SearchBar';
@@ -54,6 +54,10 @@ const SemPage: React.FC = () => {
   const [editingSem, setEditingSem] = useState<Sem | null>(null);
   const [newSemData, setNewSemData] = useState<Omit<Sem, 'id'>>(getInitialSemData());
   const [hasUnsaved, setHasUnsaved] = useState(false);
+
+  // Refs y estado para integración SearchBar-ExcelTable
+  const excelTableRef = useRef<ExcelTableRef>(null);
+  const [searchResults, setSearchResults] = useState<Array<{ rowIndex: number; columnKey: string; content: string }>>([]);
 
   // Atajo 'n' para crear nuevo SEM
   useNewShortcut({ isModalOpen, onNew: () => handleOpenModal() });
@@ -164,6 +168,24 @@ const SemPage: React.FC = () => {
     setSearchQuery(query);
   }, []);
 
+  // Manejar consulta de búsqueda para ExcelTable
+  const handleSearchQuery = useCallback((query: string) => {
+    setSearchQuery(query);
+    // Obtener resultados del ExcelTable si está disponible
+    if (excelTableRef.current) {
+      const results = excelTableRef.current.getSearchResults();
+      setSearchResults(results);
+    }
+  }, []);
+
+  // Manejar navegación a resultado
+  const handleNavigateToResult = useCallback((index: number) => {
+    if (searchResults[index] && excelTableRef.current) {
+      const result = searchResults[index];
+      excelTableRef.current.selectCell(result.rowIndex, result.columnKey);
+    }
+  }, [searchResults]);
+
   const renderFormField = (
     label: string,
     name: keyof Omit<Sem, 'id'>,
@@ -220,6 +242,10 @@ const SemPage: React.FC = () => {
           searchFields={searchFields}
           columns={columns}
           onFilteredDataChange={handleFilteredDataChange}
+          onSearchQuery={handleSearchQuery}
+          onNavigateToResult={handleNavigateToResult}
+          excelTableRef={excelTableRef}
+          searchResults={searchResults}
           placeholder="Buscar en SEMs (nombre, región, provincia, población, etc.)..."
           className="w-full"
         />
@@ -256,8 +282,10 @@ const SemPage: React.FC = () => {
       </Modal>
 
       <ExcelTable<Sem>
+        ref={excelTableRef}
         data={filteredSems.length > 0 || searchQuery ? filteredSems : sems}
         columns={columns}
+        searchQuery={searchQuery}
         onEdit={(rowIndex, columnKey, data) => {
           handleEditSem(data.id);
         }}

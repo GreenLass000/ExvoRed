@@ -173,6 +173,15 @@ function SearchBar<T extends Record<string, any>>({
     onSearchQuery?.(searchQuery);
   }, [filteredData, searchQuery, onFilteredDataChange, onSearchQuery]);
 
+  // Navegar automáticamente al primer resultado cuando hay búsqueda activa
+  useEffect(() => {
+    if (searchQuery && searchResults.length > 0 && excelTableRef?.current && currentMatchIndex === 0) {
+      const firstResult = searchResults[0];
+      excelTableRef.current.selectCell(firstResult.rowIndex, firstResult.columnKey);
+      onNavigateToResult?.(0);
+    }
+  }, [searchResults, searchQuery, excelTableRef, currentMatchIndex, onNavigateToResult]);
+
   // Navegación entre resultados
   const goToNextMatch = () => {
     if (totalMatches > 0) {

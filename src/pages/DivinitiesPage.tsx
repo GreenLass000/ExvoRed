@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ColumnDef } from '../components/DataTable';
-import { ExcelTable } from '../components/excel';
+import { ExcelTable, ExcelTableRef } from '../components/excel';
 import Modal from '../components/Modal';
 import SearchBar from '../components/SearchBar';
 import { PlusIcon } from '../components/icons';
@@ -36,6 +36,10 @@ const DivinitiesPage: React.FC = () => {
   const [editingDivinity, setEditingDivinity] = useState<Divinity | null>(null);
   const [newDivinityData, setNewDivinityData] = useState<Omit<Divinity, 'id'>>(getInitialDivinityData());
   const [hasUnsaved, setHasUnsaved] = useState(false);
+
+  // Refs y estado para integración SearchBar-ExcelTable
+  const excelTableRef = useRef<ExcelTableRef>(null);
+  const [searchResults, setSearchResults] = useState<Array<{ rowIndex: number; columnKey: string; content: string }>>([]);
 
   // Atajo 'n' para crear nueva divinidad
   useNewShortcut({ isModalOpen, onNew: () => handleOpenModal() });
@@ -165,6 +169,24 @@ const DivinitiesPage: React.FC = () => {
     setSearchQuery(query);
   }, []);
 
+  // Manejar consulta de búsqueda para ExcelTable
+  const handleSearchQuery = useCallback((query: string) => {
+    setSearchQuery(query);
+    // Obtener resultados del ExcelTable si está disponible
+    if (excelTableRef.current) {
+      const results = excelTableRef.current.getSearchResults();
+      setSearchResults(results);
+    }
+  }, []);
+
+  // Manejar navegación a resultado
+  const handleNavigateToResult = useCallback((index: number) => {
+    if (searchResults[index] && excelTableRef.current) {
+      const result = searchResults[index];
+      excelTableRef.current.selectCell(result.rowIndex, result.columnKey);
+    }
+  }, [searchResults]);
+
   if (loading) {
     return <div className="text-center p-8">Cargando datos...</div>;
   }
@@ -188,6 +210,10 @@ const DivinitiesPage: React.FC = () => {
           searchFields={searchFields}
           columns={columns}
           onFilteredDataChange={handleFilteredDataChange}
+          onSearchQuery={handleSearchQuery}
+          onNavigateToResult={handleNavigateToResult}
+          excelTableRef={excelTableRef}
+          searchResults={searchResults}
           placeholder="Buscar en divinidades (nombre, atributos, historia, representación, etc.)..."
           className="w-full"
         />
@@ -258,8 +284,10 @@ const DivinitiesPage: React.FC = () => {
       </Modal>
 
       <ExcelTable<Divinity>
+        ref={excelTableRef}
         data={filteredDivinities.length > 0 || searchQuery ? filteredDivinities : divinities}
         columns={columns}
+        searchQuery={searchQuery}
         onEdit={(rowIndex, columnKey, data) => {
           handleEditDivinity(data.id);
         }}

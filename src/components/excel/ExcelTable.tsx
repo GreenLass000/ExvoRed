@@ -9,6 +9,7 @@ import DraggableColumn from './DraggableColumn';
 import ColumnHeader from './ColumnHeader';
 import CellModal from './CellModal';
 import EditCellModal from './EditCellModal';
+import { highlightText } from '../../utils/highlightText';
 
 interface ExcelTableProps<T> {
   data: T[];
@@ -373,7 +374,7 @@ const ExcelTableInner = <T extends Record<string, any>>({
   // Render cell content
   const renderCellContent = useCallback((item: T, columnKey: string, rowIndex: number) => {
     const column = columns.find(col => String(col.key) === columnKey);
-    
+
     // Show status message if this row has one
     if (status?.rowIndex === rowIndex) {
       return (
@@ -385,25 +386,33 @@ const ExcelTableInner = <T extends Record<string, any>>({
         </span>
       );
     }
-    
+
     // Normal cell content rendering
     const value = item[columnKey];
-    
+    let contentToRender: React.ReactNode = '';
+
     // Use getDisplayValue first if available (for foreign key columns)
     if (column?.getDisplayValue) {
-      return column.getDisplayValue(item) || '';
+      contentToRender = column.getDisplayValue(item) || '';
+    } else if (column?.render) {
+      contentToRender = column.render(value, item);
+    } else if (value == null) {
+      contentToRender = '';
+    } else if (typeof value === 'boolean') {
+      contentToRender = value ? 'Sí' : 'No';
+    } else if (value instanceof Date) {
+      contentToRender = value.toLocaleDateString();
+    } else {
+      contentToRender = String(value);
     }
-    
-    if (column?.render) {
-      return column.render(value, item);
+
+    // Apply highlighting if search query is active and content is a string
+    if (searchQuery && typeof contentToRender === 'string') {
+      return highlightText(contentToRender, searchQuery);
     }
-    
-    if (value == null) return '';
-    if (typeof value === 'boolean') return value ? 'Sí' : 'No';
-    if (value instanceof Date) return value.toLocaleDateString();
-    
-    return String(value);
-  }, [columns, status]);
+
+    return contentToRender;
+  }, [columns, status, searchQuery]);
 
 
   return (
@@ -449,10 +458,18 @@ const ExcelTableInner = <T extends Record<string, any>>({
         >
           {/* Header sticky que se mueve con el scroll */}
           <div className="sticky top-0 z-10 bg-white">
-            <div 
+            <div
               className="flex bg-gray-100 border-b border-gray-200"
-              style={{ minWidth: `${contentWidth}px` }}
+              style={{ minWidth: `${contentWidth + 50}px` }}
             >
+              {/* Columna de números de fila - Header */}
+              <div
+                className="flex items-center justify-center font-semibold text-xs text-gray-600 bg-gray-100 border-r border-gray-300 sticky left-0 z-20"
+                style={{ width: '50px', minWidth: '50px', maxWidth: '50px' }}
+              >
+                #
+              </div>
+
               {excelState.visibleColumns.map((column, index) => (
                 <DraggableColumn
                   key={column.key}
@@ -488,7 +505,7 @@ const ExcelTableInner = <T extends Record<string, any>>({
           </div>
 
           {/* Contenido de filas */}
-          <div style={{ minWidth: `${contentWidth}px` }}>
+          <div style={{ minWidth: `${contentWidth + 50}px` }}>
             {excelState.filteredData.map((item, rowIndex) => (
               <div
                 key={item[idField] || rowIndex}
@@ -497,6 +514,14 @@ const ExcelTableInner = <T extends Record<string, any>>({
                   excelState.selectedRows.has(item[idField] || rowIndex) && "bg-blue-50"
                 )}
               >
+                {/* Columna de números de fila */}
+                <div
+                  className="flex items-center justify-center text-xs font-medium text-gray-500 bg-gray-50 border-r border-gray-300 sticky left-0 z-10"
+                  style={{ width: '50px', minWidth: '50px', maxWidth: '50px' }}
+                >
+                  {rowIndex + 1}
+                </div>
+
                 {excelState.visibleColumns.map((column) => (
                   <div
                     key={column.key}
@@ -583,8 +608,5 @@ const ExcelTableInner = <T extends Record<string, any>>({
 export const ExcelTable = forwardRef(ExcelTableInner) as <T extends Record<string, any>>(
   props: ExcelTableProps<T> & { ref?: React.Ref<ExcelTableRef> }
 ) => React.ReactElement;
-
-// Export the ref type
-export type { ExcelTableRef };
 
 export default ExcelTable;

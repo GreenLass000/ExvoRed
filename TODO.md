@@ -1,165 +1,65 @@
-# MEJORAS Y MODIFICACIONES EXVORED
+# TODO - ExvoRed
 
-## COSAS GENERALES
+## Búsqueda y Navegación
+- [x] El buscador de las paginas debe subrayar en amarillo los resultados que encuentre
+- [ ] Buscador complejo, una lupa en el menu o algo que busque una palabra y devuelva una lista de las columnas donde se haya encontrado esa palabra en todas las tablas
 
-- **Buscador por palabras clave:**  
-  Que aparezca la lista completa de los resultados para poder buscar en contexto.  
-  La palabra buscada debe aparecer **subrayada dentro de la frase**, al estilo Word.
+## Modales y UI
+- [ ] Que no se cierre el modal al hacer click fuera, solo con x y cancelar
+- [ ] El modal de editar mucho mas grande y con texto enriquecido
 
-- **Evitar pérdida de datos:**  
-  Si al añadir un nuevo exvoto, SEM, etc., se pincha fuera del cuadro sin guardar, se borra todo.  
-  → Evitar esto de alguna manera.
+## Navegación y Atajos
+- [ ] Hacer que abra en una nueva ventana al inspeccionar
+- [ ] En inspeccionar no deshabilitar los atajos
+- [ ] Editar elemento que sea sobre inspeccionar en vez de abrir el modal
 
-- **Inspeccionar (“i”):**  
-  Que la ficha se abra en otra pestaña distinta o al menos dé la opción.  
-  (Mismo comportamiento para las imágenes).
+## Tabla Excel
+- [x] Poner numero de filas estilo excel
+- [ ] Cambiar tamaño vertical
+- [ ] Doble click para editar tablas sin modal en las filas de texto no relacionadas
+- [ ] Un + al final de la tabla que cree un elemento vacio
+- [ ] Boton para duplicar fila
+- [ ] Permitir copiar texto
+- [ ] Tiene que ordenarse por defecto por ultimo modificado
+- [ ] Guardar un estado de configuraciones, como filtros activos por pagina, etc...
+- [ ] En modo vista que no se vea el id, que se vea el texto bueno
 
-- **Navegación entre fichas:**  
-  Que se pueda pasar a la ficha anterior o siguiente con flechas.
+## Bugs
+- [ ] Pagina divinidades no funciona
+- [ ] A veces desaparecen cosas si estan vacias
+- [ ] Numero de exvotos no va automatico
+- [ ] Fechas de exvotos tampoco en sem
 
-- **Numeración de filas:**  
-  Que las filas estén numeradas como en Excel.
+## Formularios
+- [ ] Arreglar las tabulaciones en nuevo
+- [ ] Añadir buscador al desplegable de sems en nuevo exvoto
+- [ ] Crear nuevo milagro, personaje y divinidad desde nuevo exvoto
+- [ ] Cambiar fecha a texto no a date
+- [ ] En genero añadir ambos y desconocidos y quitar otro
 
-- **Cuadros flotantes:**  
-  No se leen bien. Sería mejor un cuadro más grande para leer más texto de un vistazo.
+## Imágenes
+- [ ] Al dar "ampliar" que la imagen se abra en una pestaña nueva
+- [ ] Opción de volver a descargar la imagen
+- [ ] Permitir hacer zoom (usando la ruedita del ratón)
+- [ ] Si hay varias imágenes en un exvoto, permitir pasar de una a otra cuando está ampliada
+- [ ] Poder añadir una nota o subtítulo a la imagen (para escribir la fuente)
+- [ ] Añadir imagen (funcionalidad general)
 
-- **Errores detectados:**
-  - No se pueden borrar filas.  
-  - No se pueden borrar ni editar milagros o personajes.  
-  - Los elementos (exvotos, catálogos, etc.) aparecen desordenados incluso con filtro.
+## Exvotos
+- [ ] Añadir columna referencias a exvoto
+- [ ] Campo virgen o santo de exvoto tiene que estar vinculada a la tabla divinidades y ser un desplegable
+- [ ] En exvoto que lugar de origen este entre estatus social y milagro
+- [ ] Poder añadir exvoto nuevo desde pagina de sem
 
-- **Copiar filas completas:**  
-  Sería útil poder seleccionar/copiar filas enteras para duplicar datos similares.
+## Catálogos
+- [ ] Eliminar lugar de publicacion
+- [ ] Que lugares relacionados sea un texto
+- [ ] Descripcion de la ubicacion -> descripcion
+- [ ] Borrar numero total de exvotos
+- [ ] Vincular sems relacionados
 
-- **Copiar/pegar con teclado:**  
-  Permitir `Ctrl + C` y `Ctrl + V` en celdas.
-
----
-
-## ATAJOS
-
-- **Error:**  
-  La tecla “e” abre en modo lectura en SEM, Catálogos y Divinidades (solo funciona en Exvotos).
-
-- **Cambiar:**  
-  Al hacer doble clic en una celda debe abrir en modo **editar**, no “ver”.
-
-- **Navegación con teclado:**  
-  Poder moverse entre campos con flechas (↑ ↓ ← →) al crear nuevos registros.
-
-- **Error:**  
-  Tras “Inspeccionar”, la mayoría de los atajos dejan de funcionar (excepto `Shift + e`).
-
----
-
-## EXVOTOS
-
-- **Nueva celda:**  
-  Añadir campo `Referencias` (texto) para bibliografía específica.  
-  → Vincular a la tabla **Catálogos** (que al pinchar lleve al catálogo concreto).
-
-- **Vinculación:**  
-  Con la tabla de **Divinidades**.
-
-- **Orden de columnas:**
-  - La columna **Imagen** debe ir al final.
-  - La columna **Lugar de origen** debe ir entre “Estatus social” y “Milagro”.
-
-- **Errores y mejoras:**
-  - En modo visualización, algunas celdas muestran números en lugar de texto (SEM ofrenda, SEM conservación, Imagen).  
-  - Al pinchar en esas celdas debería llevar a su ficha SEM (en nueva pestaña).
-  - El filtro “más antiguo (modif.)” no funciona bien.
-  - Diferencia de fechas entre tabla y ficha (la ficha muestra un día antes).
-
-- **Desde la ficha:**
-  - Poder añadir milagros y personajes nuevos directamente.
-  - Las opciones de SEM deben aparecer **ordenadas alfabéticamente** y ser **buscables**.
-  - La fecha debe poder escribirse manualmente (`AÑO-MES-DÍA`, ej. `1787-X-01`).
-
-- **Campos de texto (Información adicional, Forma de texto, Transcripción):**
-  - Soporte para párrafos, negritas, subrayados, justificación.
-  - En “Transcripción”, permitir **superíndices** (ejemplo de exvoto transcrito incluido en el documento original).
-
-- **Campo “Género”:**
-  - Añadir opciones: `Ambos`, `Desconocido`.  
-  - Eliminar `Otro`.
-
-- **Imágenes:**
-  - Ampliar en pestaña nueva.  
-  - Opción para descargar.  
-  - Zoom con la rueda del ratón.  
-  - Si hay varias, poder pasar entre ellas.  
-  - Añadir notas o subtítulos a la imagen (fuente, procedencia…).
-
-- **Reorganización visual de la ficha:**
-
-  1. **Ubicación:** Lugar de ofrenda + lugar de conservación + provincia.  
-     - “Lugar de origen del milagro” pasa a “Personas involucradas” como “Lugar de origen devoto/a”.
-
-  2. **Detalles del Milagro:**  
-     - Fecha `AÑO/MES/DÍA`  
-     - La provincia va en “Ubicación”.
-
-  3. **Personas involucradas:**  
-     - Añadir “Personajes representados”.  
-     - Añadir “Lugar de origen devoto/a”.
-
-  4. **Descripción del Exvoto:**  
-     - Orden: Material → Estado → Forma del texto → Uso de mayúsculas.  
-     - Quitar “Personajes representados”.
-
-  5. **Transcripción**  
-  6. **Información Adicional**  
-  7. **Referencias (nuevo):**  
-     - Vincular con catálogos + texto libre.
-
-- **Importante:**  
-  Cuando una ficha está en modo visualización, los campos vacíos no deben desaparecer.  
-  Deben aparecer vacíos explícitamente.
-
----
-
-## SEM
-
-- Vincular con **Divinidades** (puede haber más de una).  
-- **Error:** No deja añadir exvotos conservados en cada SEM.  
-  → Igual que desde exvoto se puede crear SEM, desde SEM se debería poder crear exvoto.  
-- Mostrar la lista de exvotos vinculados.  
-- Permitir añadir imágenes.
-
----
-
-## CATÁLOGOS
-
-- **Eliminar:** Campo “Lugar de publicación”.  
-  → Sustituir por “Lugares relacionados” (texto libre).
-
-- **Errores:**
-  - El campo “Nº de Exvotos” no se guarda.  
-  - “Descripción de la ubicación” → cambiar a “Descripción” (texto libre con formato).  
-  - En celdas de texto: permitir **negrita**, **cursiva**, etc., visibles también en los cuadros flotantes.
-  - Aparecen duplicadas las casillas “Nº de Exvotos” y “Nº Total Exvotos”.
-  - “Lugares relacionados” no se guarda.  
-    → Renombrar a “SEM incluidos en el catálogo”.  
-    → No está bien vinculado a SEM.  
-  - No aparecen automáticamente las provincias catalogadas.
-
-- **Nota:**  
-  No siempre tiene sentido vincular SEM ↔ Catálogo (algunos son demasiado amplios o mezclan casos).
-
----
-
-## DIVINIDADES
-
-- **SEM en los que se le da culto:**  
-  Añadirlo a la tabla. Una misma divinidad puede aparecer en varios SEM.
-
-- **Imágenes:**  
-  No permite añadir JPG (debería permitir varias fotos).
-
-- **Errores:**
-  - La tecla “e” abre en modo lectura (no editable).  
-  - La tecla “i” no funciona (no abre detalles).
-
----
-
+## Divinidades
+- [ ] Columna sem a los que se da culto, pueden ser varios sem
+- [ ] Añadir imagen
+- [ ] No se puede inspeccionar (arreglar)
+- [ ] Vincular sem y divinidades

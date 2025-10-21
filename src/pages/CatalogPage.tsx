@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ColumnDef } from '../components/DataTable';
-import { ExcelTable } from '../components/excel';
+import { ExcelTable, ExcelTableRef } from '../components/excel';
 import { PlusIcon } from '../components/icons';
 import Modal from '../components/Modal';
 import SearchBar from '../components/SearchBar';
@@ -54,6 +54,10 @@ const CatalogPage: React.FC = () => {
     const [editingCatalog, setEditingCatalog] = useState<Catalog | null>(null);
     const [newCatalogData, setNewCatalogData] = useState<Omit<Catalog, 'id'>>(getInitialCatalogData());
     const [hasUnsaved, setHasUnsaved] = useState(false);
+
+    // Refs y estado para integración SearchBar-ExcelTable
+    const excelTableRef = useRef<ExcelTableRef>(null);
+    const [searchResults, setSearchResults] = useState<Array<{ rowIndex: number; columnKey: string; content: string }>>([]);
 
     // Atajo 'n' para crear nuevo catálogo
     useNewShortcut({ isModalOpen, onNew: () => handleOpenModal() });
@@ -226,6 +230,24 @@ const CatalogPage: React.FC = () => {
         setSearchQuery(query);
     }, []);
 
+    // Manejar consulta de búsqueda para ExcelTable
+    const handleSearchQuery = useCallback((query: string) => {
+        setSearchQuery(query);
+        // Obtener resultados del ExcelTable si está disponible
+        if (excelTableRef.current) {
+            const results = excelTableRef.current.getSearchResults();
+            setSearchResults(results);
+        }
+    }, []);
+
+    // Manejar navegación a resultado
+    const handleNavigateToResult = useCallback((index: number) => {
+        if (searchResults[index] && excelTableRef.current) {
+            const result = searchResults[index];
+            excelTableRef.current.selectCell(result.rowIndex, result.columnKey);
+        }
+    }, [searchResults]);
+
     const renderFormField = useCallback((label: string, name: keyof Omit<Catalog, 'id'>, type = 'text') => {
         const commonClass = "mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm";
         const value = newCatalogData[name] ?? '';
@@ -279,6 +301,10 @@ const CatalogPage: React.FC = () => {
                     searchFields={searchFields}
                     columns={columns}
                     onFilteredDataChange={handleFilteredDataChange}
+                    onSearchQuery={handleSearchQuery}
+                    onNavigateToResult={handleNavigateToResult}
+                    excelTableRef={excelTableRef}
+                    searchResults={searchResults}
                     placeholder="Buscar en catálogos (título, referencia, autor, ubicación, etc.)..."
                     className="w-full"
                 />
@@ -314,7 +340,8 @@ const CatalogPage: React.FC = () => {
                 </form>
             </Modal>
 
-            <ExcelTable<Catalog> 
+            <ExcelTable<Catalog>
+                ref={excelTableRef}
                 data={filteredCatalogs.length > 0 || searchQuery ? filteredCatalogs : catalogs}
                 columns={columns.map(col => {
                     if (col.key === 'provinces') {
@@ -325,6 +352,7 @@ const CatalogPage: React.FC = () => {
                     }
                     return col;
                 })}
+                searchQuery={searchQuery}
                 onEdit={(rowIndex, columnKey, data) => {
                   handleEditCatalog(data.id);
                 }}
