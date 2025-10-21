@@ -8,7 +8,6 @@ import ColumnVisibilityPanel from './ColumnVisibilityPanel';
 import DraggableColumn from './DraggableColumn';
 import ColumnHeader from './ColumnHeader';
 import CellModal from './CellModal';
-import EditCellModal from './EditCellModal';
 import { highlightText } from '../../utils/highlightText';
 
 interface ExcelTableProps<T> {
@@ -81,65 +80,69 @@ const ExcelTableInner = <T extends Record<string, any>>({
   
   // Excel mode state and actions
   const [excelState, excelActions] = useExcelMode(columns, data, idField);
-  
+
   // Inline editing state
-  const [editingCell, setEditingCell] = useState<{ rowIndex: number; columnKey: string } | null>(null);
+  const [editingInlineCell, setEditingInlineCell] = useState<{ rowIndex: number; columnKey: string } | null>(null);
   const [editValue, setEditValue] = useState<any>('');
   const [status, setStatus] = useState<{ rowIndex: number, message: string, type: 'info' | 'error' } | null>(null);
   const inputRef = useRef<HTMLInputElement | HTMLSelectElement>(null);
+
+  // Copy/Paste clipboard state
+  const [copiedValue, setCopiedValue] = useState<{ value: any; columnKey: string; rowIndex: number } | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [pasteStatus, setPasteStatus] = useState<{ rowIndex: number; columnKey: string } | null>(null);
   
   // Focus on editing input when entering edit mode
   useEffect(() => {
-    if (editingCell && inputRef.current) {
+    if (editingInlineCell && inputRef.current) {
       inputRef.current.focus();
+      if (inputRef.current instanceof HTMLInputElement || inputRef.current instanceof HTMLTextAreaElement) {
+        inputRef.current.select();
+      }
     }
-  }, [editingCell]);
+  }, [editingInlineCell]);
   
-  // Inline editing functions
-  const handleCellDoubleClick = useCallback((rowIndex: number, columnKey: string) => {
-    if (!enableInlineEdit || !onRowUpdate) return;
-    
-    const rowData = excelState.filteredData[rowIndex];
-    if (!rowData) return;
-    
-    setEditingCell({ rowIndex, columnKey });
-    setEditValue(rowData[columnKey] ?? '');
-  }, [enableInlineEdit, onRowUpdate, excelState.filteredData]);
+  // Inline editing functions - removed handleCellDoubleClick, now handled in handleCellClick
   
   const handleEditChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setEditValue(e.target.value);
   }, []);
   
   const saveChanges = useCallback(async () => {
-    if (!editingCell || !onRowUpdate) return;
-    
-    const { rowIndex, columnKey } = editingCell;
+    if (!editingInlineCell || !onRowUpdate) return;
+
+    const { rowIndex, columnKey } = editingInlineCell;
     const originalRow = excelState.filteredData[rowIndex];
     if (!originalRow) return;
-    
+
     const originalValue = originalRow[columnKey];
     let finalValue: any = editValue;
-    
+
     const columnDef = columns.find(c => String(c.key) === columnKey);
+    // Convert to number for number and foreignKey types
     if (columnDef?.type === 'number' || columnDef?.type === 'foreignKey') {
       finalValue = editValue === '' || editValue === null ? null : Number(editValue);
     }
-    
-    if (finalValue !== originalValue) {
-      setStatus({ rowIndex, message: 'Guardando...', type: 'info' });
-      try {
-        const rowId = originalRow[idField];
-        await onRowUpdate(rowId, { [columnKey]: finalValue } as Partial<T>);
-        setStatus({ rowIndex, message: '¡Guardado!', type: 'info' });
-      } catch (error) {
-        setStatus({ rowIndex, message: 'Error al guardar', type: 'error' });
-        console.error('Error al actualizar fila:', error);
-      }
+
+    // Don't save if value hasn't changed
+    if (finalValue === originalValue) {
+      setEditingInlineCell(null);
+      return;
     }
-    
-    setEditingCell(null);
+
+    setStatus({ rowIndex, message: 'Guardando...', type: 'info' });
+    try {
+      const rowId = originalRow[idField];
+      await onRowUpdate(rowId, { [columnKey]: finalValue } as Partial<T>);
+      setStatus({ rowIndex, message: '¡Guardado!', type: 'info' });
+    } catch (error) {
+      setStatus({ rowIndex, message: 'Error al guardar', type: 'error' });
+      console.error('Error al actualizar fila:', error);
+    }
+
+    setEditingInlineCell(null);
     setTimeout(() => setStatus(null), 2000);
-  }, [editingCell, editValue, onRowUpdate, excelState.filteredData, columns, idField]);
+  }, [editingInlineCell, editValue, onRowUpdate, excelState.filteredData, columns, idField]);
   
   const handleInputBlur = useCallback(() => {
     saveChanges();
@@ -147,9 +150,10 @@ const ExcelTableInner = <T extends Record<string, any>>({
   
   const handleInputKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
       saveChanges();
     } else if (e.key === 'Escape') {
-      setEditingCell(null);
+      setEditingInlineCell(null);
     }
   }, [saveChanges]);
   
@@ -236,17 +240,54 @@ const ExcelTableInner = <T extends Record<string, any>>({
     }
   }, [searchResults, onCellFound]);
   
+  // Copy/Paste handlers
+  const handleCopyCellValue = useCallback((rowIndex: number, columnKey: string, value: any) => {
+    setCopiedValue({ value, columnKey, rowIndex });
+
+    // Show feedback
+    const displayValue = value !== null && value !== undefined ? String(value) : '(vacío)';
+    const truncated = displayValue.length > 30 ? displayValue.substring(0, 30) + '...' : displayValue;
+    setCopyFeedback(`Copiado: ${truncated}`);
+
+    // Clear feedback after 2 seconds
+    setTimeout(() => setCopyFeedback(null), 2000);
+  }, []);
+
+  const handlePasteCellValue = useCallback(async (rowIndex: number, columnKey: string) => {
+    if (!copiedValue || !onRowUpdate) return;
+
+    const rowData = excelState.filteredData[rowIndex];
+    if (!rowData) return;
+
+    const rowId = rowData[idField];
+
+    // Show paste status immediately
+    setPasteStatus({ rowIndex, columnKey });
+
+    try {
+      await onRowUpdate(rowId, { [columnKey]: copiedValue.value } as Partial<T>);
+
+      // Keep paste status for a moment to show success
+      setTimeout(() => setPasteStatus(null), 1000);
+    } catch (error) {
+      console.error('Error pasting value:', error);
+      setPasteStatus(null);
+      setStatus({ rowIndex, message: 'Error al pegar', type: 'error' });
+      setTimeout(() => setStatus(null), 2000);
+    }
+  }, [copiedValue, onRowUpdate, excelState.filteredData, idField]);
+
   // Keyboard navigation
   useExcelKeyboard(excelState, excelActions, {
     enabled: enableKeyboardNavigation,
-    // 'e' -> edit cell - open edit modal if onRowUpdate available, otherwise expand cell
+    // 'e' -> edit cell - start inline editing if onRowUpdate available, otherwise expand cell
     onEditCell: (rowIndex, columnKey) => {
       const rowData = excelState.filteredData[rowIndex];
-      if (rowData && onRowUpdate) {
+      if (rowData && onRowUpdate && columnKey !== 'id') {
         // Get the actual cell value
         const cellValue = rowData[columnKey];
-        // Start edit mode for this cell with the current value
-        setEditingCell({ rowIndex, columnKey });
+        // Start inline edit mode for this cell with the current value
+        setEditingInlineCell({ rowIndex, columnKey });
         setEditValue(cellValue); // Use the actual value, not converted to string
       } else if (rowData) {
         // Fallback to readonly cell modal
@@ -265,7 +306,13 @@ const ExcelTableInner = <T extends Record<string, any>>({
       if (rowData) onEdit?.(rowIndex, excelState.selectedCell?.columnKey || '', rowData);
     },
     // Enter -> inline editing when available
-    onStartInlineEdit: enableInlineEdit && onRowUpdate ? handleCellDoubleClick : undefined,
+    onStartInlineEdit: onRowUpdate ? (rowIndex, columnKey) => {
+      const rowData = excelState.filteredData[rowIndex];
+      if (rowData && columnKey !== 'id') {
+        setEditingInlineCell({ rowIndex, columnKey });
+        setEditValue(rowData[columnKey] ?? '');
+      }
+    } : undefined,
     inDetailsTab,
     // 'p' handled in keyboard (only in details)
     onPrint,
@@ -292,6 +339,8 @@ const ExcelTableInner = <T extends Record<string, any>>({
         console.warn('Failed to copy to clipboard:', err);
       }
     },
+    onCopyCellValue: handleCopyCellValue,
+    onPasteCellValue: handlePasteCellValue,
     onNavigateToReference
   });
 
@@ -332,16 +381,24 @@ const ExcelTableInner = <T extends Record<string, any>>({
   // Handle cell click
   const handleCellClick = useCallback((rowIndex: number, columnKey: string, event: React.MouseEvent) => {
     excelActions.selectCell(rowIndex, columnKey);
-    
-    // Double click opens cell modal for viewing
+
+    // Double click behavior
     if (event.detail === 2) {
       const rowData = excelState.filteredData[rowIndex];
-      if (rowData) {
+      if (!rowData) return;
+
+      // If onRowUpdate is available and not the id column, enable inline editing
+      if (onRowUpdate && columnKey !== 'id') {
+        setEditingInlineCell({ rowIndex, columnKey });
+        setEditValue(rowData[columnKey] ?? '');
+      }
+      // Otherwise, open view-only modal (old behavior)
+      else {
         const content = String(rowData[columnKey] || '');
         excelActions.expandCell(content, rowIndex, columnKey);
       }
     }
-  }, [excelActions, excelState.filteredData]);
+  }, [excelActions, excelState.filteredData, onRowUpdate]);
 
   // Get cell customization
   const getCellStyle = useCallback((rowId: string | number, columnKey: string) => {
@@ -417,6 +474,16 @@ const ExcelTableInner = <T extends Record<string, any>>({
 
   return (
     <div className={cn("w-full", className)}>
+      {/* Copy feedback toast */}
+      {copyFeedback && (
+        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          {copyFeedback}
+        </div>
+      )}
+
       {/* Excel Controls - Integrado con el diseño de la página */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -429,7 +496,7 @@ const ExcelTableInner = <T extends Record<string, any>>({
             </svg>
             Columnas
           </button>
-          
+
           <button
             onClick={excelActions.resetColumns}
             className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
@@ -437,7 +504,7 @@ const ExcelTableInner = <T extends Record<string, any>>({
             Resetear
           </button>
         </div>
-        
+
         {/* Info */}
         <div className="text-sm text-gray-500">
           {excelState.filteredData.length} de {data.length} registros
@@ -522,34 +589,73 @@ const ExcelTableInner = <T extends Record<string, any>>({
                   {rowIndex + 1}
                 </div>
 
-                {excelState.visibleColumns.map((column) => (
-                  <div
-                    key={column.key}
-                    data-cell={`${rowIndex}-${column.key}`}
-                    className={cn(
-                      "px-3 py-2 text-sm text-gray-900 cursor-cell bg-white",
-                      "overflow-hidden text-ellipsis whitespace-nowrap h-10 flex items-center flex-shrink-0",
-                      "border-r border-gray-200 last:border-r-0",
-                      // Special styling for foreign key cells
-                      (column.key.includes('sem_id') || column.key.includes('catalog_id')) &&
-                      item[column.key] &&
-                      "hover:bg-blue-50 hover:text-blue-700 transition-colors cursor-pointer",
-                      excelState.selectedCell?.rowIndex === rowIndex && 
-                      excelState.selectedCell?.columnKey === column.key &&
-                      "ring-2 ring-blue-500 bg-blue-50 ring-inset"
-                    )}
-                    style={{
-                      width: `${column.width}px`,
-                      minWidth: `${column.width}px`,
-                      maxWidth: `${column.width}px`,
-                      ...getCellStyle(item[idField] || rowIndex, column.key)
-                    }}
-                    onClick={(e) => handleCellClick(rowIndex, column.key, e)}
-                    title={String(item[column.key] || '')}
-                  >
-                    {renderCellContent(item, column.key, rowIndex)}
-                  </div>
-                ))}
+                {excelState.visibleColumns.map((column) => {
+                  const isEditingThisCell = editingInlineCell?.rowIndex === rowIndex && editingInlineCell?.columnKey === column.key;
+                  const columnDef = columns.find(col => String(col.key) === column.key);
+                  const isCopiedCell = copiedValue?.rowIndex === rowIndex && copiedValue?.columnKey === column.key;
+                  const isPastedCell = pasteStatus?.rowIndex === rowIndex && pasteStatus?.columnKey === column.key;
+
+                  return (
+                    <div
+                      key={column.key}
+                      data-cell={`${rowIndex}-${column.key}`}
+                      className={cn(
+                        "px-3 py-2 text-sm text-gray-900 cursor-cell bg-white",
+                        "overflow-hidden text-ellipsis whitespace-nowrap h-10 flex items-center flex-shrink-0",
+                        "border-r border-gray-200 last:border-r-0",
+                        // Special styling for foreign key cells
+                        (column.key.includes('sem_id') || column.key.includes('catalog_id')) &&
+                        item[column.key] &&
+                        "hover:bg-blue-50 hover:text-blue-700 transition-colors cursor-pointer",
+                        excelState.selectedCell?.rowIndex === rowIndex &&
+                        excelState.selectedCell?.columnKey === column.key &&
+                        "ring-2 ring-blue-500 bg-blue-50 ring-inset",
+                        // Highlight copied cell with dashed border
+                        isCopiedCell && "ring-2 ring-dashed ring-green-400",
+                        // Highlight pasted cell with success background
+                        isPastedCell && "bg-green-100 ring-2 ring-green-500"
+                      )}
+                      style={{
+                        width: `${column.width}px`,
+                        minWidth: `${column.width}px`,
+                        maxWidth: `${column.width}px`,
+                        ...getCellStyle(item[idField] || rowIndex, column.key)
+                      }}
+                      onClick={(e) => handleCellClick(rowIndex, column.key, e)}
+                      title={String(item[column.key] || '')}
+                    >
+                      {isEditingThisCell ? (
+                        columnDef?.type === 'foreignKey' && columnDef.foreignKeyData ? (
+                          <select
+                            ref={inputRef as React.Ref<HTMLSelectElement>}
+                            value={editValue ?? ''}
+                            onChange={handleEditChange}
+                            onBlur={handleInputBlur}
+                            onKeyDown={handleInputKeyDown}
+                            className="w-full h-full px-1 border border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded text-sm bg-white"
+                          >
+                            <option value="">-- Sin asignar --</option>
+                            {columnDef.foreignKeyData.map(fk => (
+                              <option key={fk.id} value={fk.id}>{fk.name || `#${fk.id}`}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            ref={inputRef as React.Ref<HTMLInputElement>}
+                            type={columnDef?.type === 'date' ? 'date' : columnDef?.type === 'number' ? 'number' : 'text'}
+                            value={columnDef?.type === 'date' && editValue ? (editValue as string).split('T')[0] : editValue ?? ''}
+                            onChange={handleEditChange}
+                            onBlur={handleInputBlur}
+                            onKeyDown={handleInputKeyDown}
+                            className="w-full h-full px-1 border border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded text-sm"
+                          />
+                        )
+                      ) : (
+                        renderCellContent(item, column.key, rowIndex)
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
@@ -564,7 +670,7 @@ const ExcelTableInner = <T extends Record<string, any>>({
         isOpen={excelState.showColumnPanel}
       />
 
-      {/* Cell Modal */}
+      {/* Cell Modal (only for view mode - when no onRowUpdate or for 'id' column) */}
       {excelState.expandedCell && (
         <CellModal
           isOpen={excelState.showCellModal}
@@ -573,31 +679,6 @@ const ExcelTableInner = <T extends Record<string, any>>({
           rowIndex={excelState.expandedCell.rowIndex}
           columnKey={excelState.expandedCell.columnKey}
           onClose={excelActions.closeCellModal}
-        />
-      )}
-      
-      {/* Edit Cell Modal */}
-      {editingCell && onRowUpdate && (
-        <EditCellModal
-          isOpen={!!editingCell}
-          title={columns.find(col => String(col.key) === editingCell.columnKey)?.header || editingCell.columnKey}
-          rowIndex={editingCell.rowIndex}
-          columnKey={editingCell.columnKey}
-          initialValue={editValue}
-          column={columns.find(col => String(col.key) === editingCell.columnKey)}
-          onClose={() => {
-            setEditingCell(null);
-            setEditValue(''); // Clear edit value when closing
-          }}
-          onSave={async (newValue) => {
-            const originalRow = excelState.filteredData[editingCell.rowIndex];
-            if (originalRow && onRowUpdate) {
-              const rowId = originalRow[idField];
-              await onRowUpdate(rowId, { [editingCell.columnKey]: newValue } as Partial<T>);
-            }
-            setEditingCell(null);
-            setEditValue(''); // Clear edit value after saving
-          }}
         />
       )}
     </div>

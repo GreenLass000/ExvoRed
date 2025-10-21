@@ -290,7 +290,7 @@ const SemPage: React.FC = () => {
           handleEditSem(data.id);
         }}
         onView={(rowIndex, columnKey, data) => {
-          handleViewDetail(data.id);
+          window.open(`/sem/${data.id}`, '_blank');
         }}
         onInspect={(rowIndex, columnKey, data) => {
           console.log('Inspeccionar SEM:', data);

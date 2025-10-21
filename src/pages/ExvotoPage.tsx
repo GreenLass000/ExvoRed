@@ -613,7 +613,7 @@ return (
           handleEditExvoto(data.id);
         }}
         onView={(rowIndex, columnKey, data) => {
-          handleView(data.id);
+          window.open(`/exvoto/${data.id}`, '_blank');
         }}
         onInspect={(rowIndex, columnKey, data) => {
           console.log('Inspeccionar:', data);
@@ -632,9 +632,9 @@ return (
         onNavigateMiracles={() => navigate('/miracles')}
         onNavigateToReference={(type, id) => {
           if (type === 'sem') {
-            navigate(`/sem/${id}`);
+            window.open(`/sem/${id}`, '_blank');
           } else if (type === 'catalog') {
-            navigate(`/catalog/${id}`);
+            window.open(`/catalog/${id}`, '_blank');
           }
         }}
         blockNavigation={isModalOpen || isSemModalOpen}

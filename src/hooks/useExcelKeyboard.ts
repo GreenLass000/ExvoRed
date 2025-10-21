@@ -27,6 +27,9 @@ interface ExcelKeyboardOptions {
   onNavigateToReference?: (referenceType: 'sem' | 'catalog', referenceId: number) => void;
   // Inline editing support
   onStartInlineEdit?: (rowIndex: number, columnKey: string) => void; // Enter - for inline editing
+  // Copy/Paste cell values
+  onCopyCellValue?: (rowIndex: number, columnKey: string, value: any) => void; // Ctrl+C
+  onPasteCellValue?: (rowIndex: number, columnKey: string) => Promise<void>; // Ctrl+V
 }
 
 export function useExcelKeyboard<T extends Record<string, any>>(
@@ -363,13 +366,24 @@ export function useExcelKeyboard<T extends Record<string, any>>(
               break;
 
             case 'c':
-              // Copy
+              // Copy cell value
               if (state.selectedCell) {
                 const rowData = state.filteredData[state.selectedCell.rowIndex];
                 if (rowData) {
-                  const content = String(rowData[state.selectedCell.columnKey] || '');
+                  const value = rowData[state.selectedCell.columnKey];
+                  // Copy the actual value (ID for foreignKey, not the display text)
+                  options.onCopyCellValue?.(state.selectedCell.rowIndex, state.selectedCell.columnKey, value);
+                  // Legacy onCopy for backwards compatibility
+                  const content = String(value || '');
                   options.onCopy?.(content);
                 }
+              }
+              break;
+
+            case 'v':
+              // Paste cell value
+              if (state.selectedCell && options.onPasteCellValue) {
+                options.onPasteCellValue(state.selectedCell.rowIndex, state.selectedCell.columnKey);
               }
               break;
 

@@ -69,12 +69,7 @@ export const CellModal: React.FC<CellModalProps> = ({
     }
   }, [isOpen, handleKeyDown]);
 
-  // Handle click outside to close
-  const handleBackdropClick = useCallback((e: React.MouseEvent) => {
-    if (modalRef.current && e.target === modalRef.current) {
-      onClose();
-    }
-  }, [onClose]);
+  // Removed: No longer closing on backdrop click
 
   // Copy content to clipboard
   const handleCopy = useCallback(async () => {
@@ -100,11 +95,10 @@ export const CellModal: React.FC<CellModalProps> = ({
     <div
       ref={modalRef}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-      onClick={handleBackdropClick}
     >
       <div className={cn(
         "bg-white dark:bg-gray-800 rounded-lg shadow-xl",
-        "w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col",
+        "w-[90vw] h-[90vh] flex flex-col",
         "border border-gray-200 dark:border-gray-700",
         className
       )}>
@@ -112,50 +106,50 @@ export const CellModal: React.FC<CellModalProps> = ({
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded">
-              <svg 
-                width="20" 
-                height="20" 
-                viewBox="0 0 24 24" 
-                fill="none" 
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
                 className="text-blue-600 dark:text-blue-400"
               >
-                <path 
-                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
+                <path
+                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-                <polyline 
-                  points="14,2 14,8 20,8" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
+                <polyline
+                  points="14,2 14,8 20,8"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-                <line 
-                  x1="16" 
-                  y1="13" 
-                  x2="8" 
-                  y2="13" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
+                <line
+                  x1="16"
+                  y1="13"
+                  x2="8"
+                  y2="13"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-                <line 
-                  x1="16" 
-                  y1="17" 
-                  x2="8" 
-                  y2="17" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
+                <line
+                  x1="16"
+                  y1="17"
+                  x2="8"
+                  y2="17"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
                   strokeLinejoin="round"
                 />
               </svg>
             </div>
-            
+
             <div>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {title}
@@ -165,7 +159,7 @@ export const CellModal: React.FC<CellModalProps> = ({
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             {/* Copy button */}
             <button
@@ -178,24 +172,24 @@ export const CellModal: React.FC<CellModalProps> = ({
               title="Copiar contenido (Ctrl+C)"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <rect 
-                  x="9" 
-                  y="9" 
-                  width="13" 
-                  height="13" 
-                  rx="2" 
-                  ry="2" 
-                  stroke="currentColor" 
+                <rect
+                  x="9"
+                  y="9"
+                  width="13"
+                  height="13"
+                  rx="2"
+                  ry="2"
+                  stroke="currentColor"
                   strokeWidth="2"
                 />
-                <path 
-                  d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" 
-                  stroke="currentColor" 
+                <path
+                  d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                  stroke="currentColor"
                   strokeWidth="2"
                 />
               </svg>
             </button>
-            
+
             {/* Close button */}
             <button
               onClick={onClose}
@@ -207,11 +201,11 @@ export const CellModal: React.FC<CellModalProps> = ({
               title="Cerrar (ESC)"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path 
-                  d="M18 6L6 18M6 6l12 12" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
+                <path
+                  d="M18 6L6 18M6 6l12 12"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
                   strokeLinejoin="round"
                 />
               </svg>
@@ -235,7 +229,7 @@ export const CellModal: React.FC<CellModalProps> = ({
                   </span>
                 )}
               </div>
-              
+
               <div className="text-xs">
                 <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded">
                   ESC
@@ -243,7 +237,7 @@ export const CellModal: React.FC<CellModalProps> = ({
                 <span className="ml-1">para cerrar</span>
               </div>
             </div>
-            
+
             {/* Text area */}
             <div className="flex-1 relative">
               <textarea
@@ -261,7 +255,7 @@ export const CellModal: React.FC<CellModalProps> = ({
                 }}
                 spellCheck={false}
               />
-              
+
               {/* Character limit indicator */}
               {content.length > 1000 && (
                 <div className="absolute top-2 right-2 px-2 py-1 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 text-xs rounded">
@@ -282,7 +276,7 @@ export const CellModal: React.FC<CellModalProps> = ({
               </svg>
               <span>Contenido de solo lectura</span>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1">
                 <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded">
@@ -290,7 +284,7 @@ export const CellModal: React.FC<CellModalProps> = ({
                 </kbd>
                 Copiar
               </span>
-              
+
               <button
                 onClick={onClose}
                 className={cn(

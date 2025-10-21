@@ -357,7 +357,7 @@ const CatalogPage: React.FC = () => {
                   handleEditCatalog(data.id);
                 }}
                 onView={(rowIndex, columnKey, data) => {
-                  handleViewDetail(data.id);
+                  window.open(`/catalog/${data.id}`, '_blank');
                 }}
                 onInspect={(rowIndex, columnKey, data) => {
                   console.log('Inspeccionar Catálogo:', data);

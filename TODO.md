@@ -5,18 +5,18 @@
 - [ ] Buscador complejo, una lupa en el menu o algo que busque una palabra y devuelva una lista de las columnas donde se haya encontrado esa palabra en todas las tablas
 
 ## Modales y UI
-- [ ] Que no se cierre el modal al hacer click fuera, solo con x y cancelar
-- [ ] El modal de editar mucho mas grande y con texto enriquecido
+- [x] Que no se cierre el modal al hacer click fuera, solo con x y cancelar
+- [x] El modal de editar mucho mas grande y con texto enriquecido
 
 ## Navegación y Atajos
-- [ ] Hacer que abra en una nueva ventana al inspeccionar
+- [x] Hacer que abra en una nueva ventana al inspeccionar
 - [ ] En inspeccionar no deshabilitar los atajos
 - [ ] Editar elemento que sea sobre inspeccionar en vez de abrir el modal
 
 ## Tabla Excel
 - [x] Poner numero de filas estilo excel
 - [ ] Cambiar tamaño vertical
-- [ ] Doble click para editar tablas sin modal en las filas de texto no relacionadas
+- [x] Doble click para editar tablas sin modal en las filas de texto no relacionadas
 - [ ] Un + al final de la tabla que cree un elemento vacio
 - [ ] Boton para duplicar fila
 - [ ] Permitir copiar texto
