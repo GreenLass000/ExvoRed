@@ -60,18 +60,50 @@ const CatalogDetailPage: React.FC = () => {
                 target.contentEditable === 'true' ||
                 target.getAttribute('role') === 'textbox'
             );
-            
+
             if (isInputField) return;
-            
+
+            // Edit with Shift+E
             if (e.shiftKey && e.key === 'E') {
                 e.preventDefault();
                 handleEditCatalog();
+                return;
+            }
+
+            // Navigation shortcuts (only when not using Ctrl/Alt/Meta)
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+            switch (e.key.toLowerCase()) {
+                case 's':
+                    e.preventDefault();
+                    navigate('/sems');
+                    break;
+                case 'c':
+                    e.preventDefault();
+                    navigate('/catalog');
+                    break;
+                case 'v':
+                    e.preventDefault();
+                    navigate('/exvotos');
+                    break;
+                case 'd':
+                    e.preventDefault();
+                    navigate('/divinities');
+                    break;
+                case 'p':
+                    e.preventDefault();
+                    navigate('/characters');
+                    break;
+                case 'm':
+                    e.preventDefault();
+                    navigate('/miracles');
+                    break;
             }
         };
 
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [handleEditCatalog]);
+    }, [handleEditCatalog, navigate]);
 
     if (loading) {
         return <div className="text-center p-8">Cargando detalles del catálogo...</div>;
@@ -92,11 +124,20 @@ const CatalogDetailPage: React.FC = () => {
     }
 
 
-    const renderField = (label: string, value: string | number | null) => (
+    const renderField = (label: string, value: string | number | null | undefined) => (
         <div className="mb-4">
             <label className="block text-sm font-medium text-slate-700 mb-1">{label}</label>
             <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-md">
-                {value || <span className="text-slate-400">No disponible</span>}
+                {value !== null && value !== undefined && value !== '' ? value : '—'}
+            </div>
+        </div>
+    );
+
+    const renderTextArea = (label: string, value: string | null | undefined) => (
+        <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{label}</label>
+            <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-md min-h-[100px] whitespace-pre-wrap">
+                {value !== null && value !== undefined && value !== '' ? value : '—'}
             </div>
         </div>
     );
@@ -114,8 +155,11 @@ const CatalogDetailPage: React.FC = () => {
             </div>
 
             <div className="bg-white rounded-lg shadow-lg p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <h2 className="text-2xl font-bold text-slate-800 mb-6">{catalog.title || '—'}</h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     {renderField('ID', catalog.id)}
+                    {renderField('Última modificación', catalog.updated_at)}
                     {renderField('Título', catalog.title)}
                     {renderField('Referencia', catalog.reference)}
                     {renderField('Autor', catalog.author)}
@@ -123,30 +167,23 @@ const CatalogDetailPage: React.FC = () => {
                     {renderField('Lugar de Publicación', catalog.publication_place)}
                     {renderField('Ubicación del Catálogo', catalog.catalog_location)}
                     {renderField('Número de Exvotos', catalog.exvoto_count)}
+                    {renderField('Número Total de Exvotos', catalog.numero_exvotos)}
+                    {renderField('Fecha del Exvoto Más Antiguo', catalog.oldest_exvoto_date)}
+                    {renderField('Fecha del Exvoto Más Reciente', catalog.newest_exvoto_date)}
                     {renderField('Lugares Relacionados', catalog.related_places)}
                 </div>
 
-                <div className="mt-6 space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Descripción de Ubicación</label>
-                        <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-md min-h-[80px]">
-                            {catalog.location_description || <span className="text-slate-400">No disponible</span>}
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Comentarios</label>
-                        <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-md min-h-[80px]">
-                            {catalog.comments || <span className="text-slate-400">No disponible</span>}
-                        </div>
-                    </div>
+                <div className="space-y-6">
+                    {renderTextArea('Descripción de Ubicación', catalog.location_description)}
+                    {renderTextArea('Otros Exvotos', catalog.other_exvotos)}
+                    {renderTextArea('Comentarios', catalog.comments)}
                 </div>
 
                 <div className="mt-8 p-4 bg-green-50 rounded-lg">
                     <h3 className="text-sm font-medium text-green-900 mb-2">Información del Catálogo</h3>
                     <p className="text-xs text-green-700">
-                        Este catálogo contiene información sobre {catalog.exvoto_count || 0} exvotos y está relacionado 
-                        con los siguientes lugares: {catalog.related_places || 'No especificado'}.
+                        Este catálogo contiene información sobre {catalog.exvoto_count || 0} exvotos y está relacionado
+                        con los siguientes lugares: {catalog.related_places || '—'}.
                     </p>
                 </div>
             </div>

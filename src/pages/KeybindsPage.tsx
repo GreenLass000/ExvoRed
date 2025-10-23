@@ -105,8 +105,9 @@ const KeybindsPage: React.FC = () => {
   const cellItems: Item[] = [
     { label: 'Ver contenido de la celda', keys: ['Enter'] },
     { label: 'Editar la celda', keys: ['e'] },
-    { label: 'Ver detalles / navegar a referencia de la celda (SEM/Catálogo)', keys: ['i'] },
-    { label: 'Editar registro completo (solo en detalle)', keys: ['E'] },
+    { label: 'Editar registro completo (solo en detalle)', keys: ['E', <><K>Shift</K> + <K>e</K></>] },
+    { label: 'Ver detalles / navegar a referencia (en la misma pestaña)', keys: ['i'] },
+    { label: 'Ver detalles / navegar a referencia (en nueva pestaña)', keys: ['I', <><K>Shift</K> + <K>I</K></>] },
     { label: 'Seleccionar / deseleccionar fila', keys: [<><K>Shift</K> + <K>Espacio</K></>] },
     { label: 'Cerrar diálogos, paneles o limpiar selección', keys: ['Esc'] }
   ];
@@ -114,6 +115,7 @@ const KeybindsPage: React.FC = () => {
   const globalActions: Item[] = [
     { label: 'Seleccionar todas las filas visibles', keys: [<><K>Ctrl</K> + <K>A</K></>] },
     { label: 'Copiar contenido de la celda seleccionada', keys: [<><K>Ctrl</K> + <K>C</K></>] },
+    { label: 'Duplicar fila', keys: [<><K>Ctrl</K> + <K>d</K></>] },
     { label: 'Imprimir', keys: [<><K>Ctrl</K> + <K>P</K></>, 'p'] },
     { label: 'Exportar', keys: [<><K>Ctrl</K> + <K>S</K></>] },
     { label: 'Abrir/cerrar panel de filtros/columnas', keys: [<><K>Ctrl</K> + <K>F</K></>] },

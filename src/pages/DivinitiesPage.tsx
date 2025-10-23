@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ColumnDef } from '../components/DataTable';
 import { ExcelTable, ExcelTableRef } from '../components/excel';
 import Modal from '../components/Modal';
@@ -28,6 +28,7 @@ const columns: ColumnDef<Divinity>[] = [
 
 const DivinitiesPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [divinities, setDivinities] = useState<Divinity[]>([]);
   const [filteredDivinities, setFilteredDivinities] = useState<Divinity[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,6 +37,7 @@ const DivinitiesPage: React.FC = () => {
   const [editingDivinity, setEditingDivinity] = useState<Divinity | null>(null);
   const [newDivinityData, setNewDivinityData] = useState<Omit<Divinity, 'id'>>(getInitialDivinityData());
   const [hasUnsaved, setHasUnsaved] = useState(false);
+  const [duplicateToast, setDuplicateToast] = useState<string | null>(null);
 
   // Refs y estado para integración SearchBar-ExcelTable
   const excelTableRef = useRef<ExcelTableRef>(null);
@@ -48,7 +50,15 @@ const DivinitiesPage: React.FC = () => {
     setLoading(true);
     try {
       const data = await api.getDivinities();
-      setDivinities(data);
+
+      // Ordenar por updated_at descendente (últimos modificados primero)
+      const sortedDivinities = [...data].sort((a, b) => {
+        const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+        const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      setDivinities(sortedDivinities);
     } catch (error) {
       console.error('Error fetching divinities:', error);
     } finally {
@@ -60,50 +70,21 @@ const DivinitiesPage: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
-  // Navegación rápida en esta página: s/c/v/d/p/m
+  // Handle URL parameters for edit mode
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.altKey || e.metaKey) return;
-      const target = e.target as HTMLElement | null;
-      const isTyping = !!target && (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.tagName === 'SELECT' ||
-        target.isContentEditable ||
-        target.getAttribute('role') === 'textbox'
-      );
-      if (isTyping) return;
+    const editId = searchParams.get('edit');
+    if (editId && divinities.length > 0) {
+      const divinityId = parseInt(editId, 10);
+      const divinity = divinities.find(d => d.id === divinityId);
+      if (divinity) {
+        // Open edit modal
+        handleEditDivinity(divinityId);
 
-      switch (e.key.toLowerCase()) {
-        case 's':
-          e.preventDefault();
-          navigate('/sems');
-          break;
-        case 'c':
-          e.preventDefault();
-          navigate('/catalog');
-          break;
-        case 'v':
-          e.preventDefault();
-          navigate('/exvotos');
-          break;
-        case 'd':
-          e.preventDefault();
-          navigate('/divinities');
-          break;
-        case 'p':
-          e.preventDefault();
-          navigate('/characters');
-          break;
-        case 'm':
-          e.preventDefault();
-          navigate('/miracles');
-          break;
+        // Clean URL parameter
+        setSearchParams({});
       }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [navigate]);
+    }
+  }, [searchParams, divinities, setSearchParams]);
 
   const handleOpenModal = () => {
     setEditingDivinity(null);
@@ -156,6 +137,53 @@ const DivinitiesPage: React.FC = () => {
   const handleDelete = async (id: number) => {
     await api.deleteDivinity(id);
     setDivinities(prev => prev.filter(d => d.id !== id));
+  };
+
+  const handleCreateEmpty = async () => {
+    try {
+      const emptyDivinity = {
+        ...getInitialDivinityData(),
+        name: '(Nueva Divinidad)' // Nombre por defecto requerido por la BD
+      };
+      const created = await api.createDivinity(emptyDivinity);
+
+      // Actualizar estado local sin recargar, manteniendo el orden por updated_at
+      setDivinities(prev => {
+        const newList = [...prev, created];
+        return newList.sort((a, b) => {
+          const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+          const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+          return dateB - dateA;
+        });
+      });
+    } catch (error) {
+      console.error("Error creating empty divinity:", error);
+    }
+  };
+
+  const handleDuplicate = async (divinity: Divinity) => {
+    try {
+      const { id, ...divinityData } = divinity;
+      const duplicated = await api.createDivinity(divinityData);
+
+      // Actualizar estado local sin recargar, manteniendo el orden por updated_at
+      setDivinities(prev => {
+        const newList = [...prev, duplicated];
+        return newList.sort((a, b) => {
+          const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+          const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+          return dateB - dateA;
+        });
+      });
+
+      // Mostrar feedback
+      setDuplicateToast('Divinidad duplicada correctamente');
+      setTimeout(() => setDuplicateToast(null), 3000);
+    } catch (error) {
+      console.error("Error duplicating divinity:", error);
+      setDuplicateToast('Error al duplicar divinidad');
+      setTimeout(() => setDuplicateToast(null), 3000);
+    }
   };
 
   // Campos para la búsqueda
@@ -292,10 +320,16 @@ const DivinitiesPage: React.FC = () => {
           handleEditDivinity(data.id);
         }}
         onView={(rowIndex, columnKey, data) => {
-          console.log('Ver Divinidad:', data);
+          // Navegar a la página de detalles
+          navigate(`/divinity/${data.id}`);
+        }}
+        onViewNewTab={(rowIndex, columnKey, data) => {
+          // Abrir detalles en nueva pestaña
+          window.open(`/divinity/${data.id}`, '_blank');
         }}
         onInspect={(rowIndex, columnKey, data) => {
-          console.log('Inspeccionar Divinidad:', data);
+          // Inspeccionar abre la página de detalles
+          navigate(`/divinity/${data.id}`);
         }}
         onPrint={() => {
           window.print();
@@ -313,8 +347,20 @@ const DivinitiesPage: React.FC = () => {
         idField="id"
         enableKeyboardNavigation={true}
         onRowUpdate={handleUpdate}
+        onCreateEmpty={handleCreateEmpty}
+        onDuplicateRow={handleDuplicate}
         className="mt-4"
       />
+
+      {/* Toast de feedback para duplicación */}
+      {duplicateToast && (
+        <div className="fixed bottom-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          {duplicateToast}
+        </div>
+      )}
     </div>
   );
 };

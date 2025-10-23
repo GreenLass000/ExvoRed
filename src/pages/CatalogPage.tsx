@@ -54,6 +54,7 @@ const CatalogPage: React.FC = () => {
     const [editingCatalog, setEditingCatalog] = useState<Catalog | null>(null);
     const [newCatalogData, setNewCatalogData] = useState<Omit<Catalog, 'id'>>(getInitialCatalogData());
     const [hasUnsaved, setHasUnsaved] = useState(false);
+    const [duplicateToast, setDuplicateToast] = useState<string | null>(null);
 
     // Refs y estado para integración SearchBar-ExcelTable
     const excelTableRef = useRef<ExcelTableRef>(null);
@@ -79,7 +80,7 @@ const CatalogPage: React.FC = () => {
                 api.getCatalogSems(),
                 api.getSems()
             ]);
-            
+
             // Calcular estadísticas dinámicamente para cada catálogo
             const catalogsWithStats = await Promise.all(
                 data.map(async (catalog) => {
@@ -91,8 +92,15 @@ const CatalogPage: React.FC = () => {
                     };
                 })
             );
-            
-            setCatalogs(catalogsWithStats);
+
+            // Ordenar por updated_at descendente (últimos modificados primero)
+            const sortedCatalogs = catalogsWithStats.sort((a, b) => {
+                const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+                const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+                return dateB - dateA;
+            });
+
+            setCatalogs(sortedCatalogs);
             setCatalogSems(catalogSemsData);
             setSems(semData);
         } catch (error) {
@@ -216,6 +224,42 @@ const CatalogPage: React.FC = () => {
 
     const handleViewDetail = (id: number) => {
         navigate(`/catalog/${id}`);
+    };
+
+    const handleCreateEmpty = async () => {
+        try {
+            const emptyCatalog = getInitialCatalogData();
+            const created = await api.createCatalog(emptyCatalog);
+            setCatalogs(prev => [...prev, created]);
+            await fetchData();
+        } catch (error) {
+            console.error("Error creating empty catalog:", error);
+        }
+    };
+
+    const handleDuplicate = async (catalog: Catalog) => {
+        try {
+            const { id, ...catalogData } = catalog;
+            const duplicated = await api.createCatalog(catalogData);
+
+            // Actualizar estado local sin recargar, manteniendo el orden por updated_at
+            setCatalogs(prev => {
+                const newList = [...prev, duplicated];
+                return newList.sort((a, b) => {
+                    const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+                    const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+                    return dateB - dateA;
+                });
+            });
+
+            // Mostrar feedback
+            setDuplicateToast('Catálogo duplicado correctamente');
+            setTimeout(() => setDuplicateToast(null), 3000);
+        } catch (error) {
+            console.error("Error duplicating catalog:", error);
+            setDuplicateToast('Error al duplicar catálogo');
+            setTimeout(() => setDuplicateToast(null), 3000);
+        }
     };
 
     // Campos para la búsqueda
@@ -357,6 +401,9 @@ const CatalogPage: React.FC = () => {
                   handleEditCatalog(data.id);
                 }}
                 onView={(rowIndex, columnKey, data) => {
+                  navigate(`/catalog/${data.id}`);
+                }}
+                onViewNewTab={(rowIndex, columnKey, data) => {
                   window.open(`/catalog/${data.id}`, '_blank');
                 }}
                 onInspect={(rowIndex, columnKey, data) => {
@@ -378,8 +425,20 @@ const CatalogPage: React.FC = () => {
                 idField="id"
                 enableKeyboardNavigation={true}
                 onRowUpdate={handleUpdate}
+                onCreateEmpty={handleCreateEmpty}
+                onDuplicateRow={handleDuplicate}
                 className="mt-4"
             />
+
+            {/* Toast de feedback para duplicación */}
+            {duplicateToast && (
+                <div className="fixed bottom-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {duplicateToast}
+                </div>
+            )}
         </div>
     );
 };

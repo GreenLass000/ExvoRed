@@ -10,23 +10,23 @@
 
 ## Navegación y Atajos
 - [x] Hacer que abra en una nueva ventana al inspeccionar
-- [ ] En inspeccionar no deshabilitar los atajos
+- [x] En inspeccionar no deshabilitar los atajos
 - [ ] Editar elemento que sea sobre inspeccionar en vez de abrir el modal
 
 ## Tabla Excel
 - [x] Poner numero de filas estilo excel
 - [ ] Cambiar tamaño vertical
 - [x] Doble click para editar tablas sin modal en las filas de texto no relacionadas
-- [ ] Un + al final de la tabla que cree un elemento vacio
-- [ ] Boton para duplicar fila
-- [ ] Permitir copiar texto
-- [ ] Tiene que ordenarse por defecto por ultimo modificado
+- [x] Un + al final de la tabla que cree un elemento vacio
+- [x] Boton para duplicar fila
+- [x] Permitir copiar texto
+- [x] Tiene que ordenarse por defecto por ultimo modificado
 - [ ] Guardar un estado de configuraciones, como filtros activos por pagina, etc...
 - [ ] En modo vista que no se vea el id, que se vea el texto bueno
 
 ## Bugs
-- [ ] Pagina divinidades no funciona
-- [ ] A veces desaparecen cosas si estan vacias
+- [x] Pagina divinidades no funciona
+- [x] A veces desaparecen cosas si estan vacias
 - [ ] Numero de exvotos no va automatico
 - [ ] Fechas de exvotos tampoco en sem
 

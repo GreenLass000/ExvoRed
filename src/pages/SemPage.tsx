@@ -54,6 +54,7 @@ const SemPage: React.FC = () => {
   const [editingSem, setEditingSem] = useState<Sem | null>(null);
   const [newSemData, setNewSemData] = useState<Omit<Sem, 'id'>>(getInitialSemData());
   const [hasUnsaved, setHasUnsaved] = useState(false);
+  const [duplicateToast, setDuplicateToast] = useState<string | null>(null);
 
   // Refs y estado para integración SearchBar-ExcelTable
   const excelTableRef = useRef<ExcelTableRef>(null);
@@ -69,7 +70,15 @@ const SemPage: React.FC = () => {
     setLoading(true);
     try {
       const data = await api.getSems();
-      setSems(data);
+
+      // Ordenar por updated_at descendente (últimos modificados primero)
+      const sortedSems = [...data].sort((a, b) => {
+        const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+        const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      setSems(sortedSems);
     } catch (error) {
       console.error("Error fetching sems:", error);
     } finally {
@@ -154,6 +163,42 @@ const SemPage: React.FC = () => {
 
   const handleViewDetail = (id: number) => {
     navigate(`/sem/${id}`);
+  };
+
+  const handleCreateEmpty = async () => {
+    try {
+      const emptySem = getInitialSemData();
+      const created = await api.createSem(emptySem);
+      setSems(prev => [...prev, created]);
+      await fetchData();
+    } catch (error) {
+      console.error("Error creating empty sem:", error);
+    }
+  };
+
+  const handleDuplicate = async (sem: Sem) => {
+    try {
+      const { id, ...semData } = sem;
+      const duplicated = await api.createSem(semData);
+
+      // Actualizar estado local sin recargar, manteniendo el orden por updated_at
+      setSems(prev => {
+        const newList = [...prev, duplicated];
+        return newList.sort((a, b) => {
+          const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+          const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+          return dateB - dateA;
+        });
+      });
+
+      // Mostrar feedback
+      setDuplicateToast('SEM duplicado correctamente');
+      setTimeout(() => setDuplicateToast(null), 3000);
+    } catch (error) {
+      console.error("Error duplicating sem:", error);
+      setDuplicateToast('Error al duplicar SEM');
+      setTimeout(() => setDuplicateToast(null), 3000);
+    }
   };
 
   // Campos para la búsqueda
@@ -290,6 +335,9 @@ const SemPage: React.FC = () => {
           handleEditSem(data.id);
         }}
         onView={(rowIndex, columnKey, data) => {
+          navigate(`/sem/${data.id}`);
+        }}
+        onViewNewTab={(rowIndex, columnKey, data) => {
           window.open(`/sem/${data.id}`, '_blank');
         }}
         onInspect={(rowIndex, columnKey, data) => {
@@ -311,8 +359,20 @@ const SemPage: React.FC = () => {
         idField="id"
         enableKeyboardNavigation={true}
         onRowUpdate={handleUpdate}
+        onCreateEmpty={handleCreateEmpty}
+        onDuplicateRow={handleDuplicate}
         className="mt-4"
       />
+
+      {/* Toast de feedback para duplicación */}
+      {duplicateToast && (
+        <div className="fixed bottom-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          {duplicateToast}
+        </div>
+      )}
     </div>
   );
 };

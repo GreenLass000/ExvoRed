@@ -16,6 +16,7 @@ interface ExcelTableProps<T> {
   className?: string;
   onEdit?: (rowIndex: number, columnKey: string, data: T) => void;
   onView?: (rowIndex: number, columnKey: string, data: T) => void;
+  onViewNewTab?: (rowIndex: number, columnKey: string, data: T) => void;
   onInspect?: (rowIndex: number, columnKey: string, data: T) => void;
   onPrint?: () => void;
   onExport?: () => void;
@@ -37,9 +38,14 @@ interface ExcelTableProps<T> {
   inDetailsTab?: boolean;
   // Navigation for foreign key references
   onNavigateToReference?: (referenceType: 'sem' | 'catalog', referenceId: number) => void;
+  onNavigateToReferenceNewTab?: (referenceType: 'sem' | 'catalog', referenceId: number) => void;
   // Inline editing support
   onRowUpdate?: (id: any, data: Partial<T>) => Promise<any>;
   enableInlineEdit?: boolean;
+  // Create empty record
+  onCreateEmpty?: () => Promise<void>;
+  // Duplicate row
+  onDuplicateRow?: (data: T) => Promise<void>;
 }
 
 export interface ExcelTableRef {
@@ -53,6 +59,7 @@ const ExcelTableInner = <T extends Record<string, any>>({
   className = '',
   onEdit,
   onView,
+  onViewNewTab,
   onInspect,
   onPrint,
   onExport,
@@ -72,8 +79,11 @@ const ExcelTableInner = <T extends Record<string, any>>({
   blockNavigation = false,
   inDetailsTab = false,
   onNavigateToReference,
+  onNavigateToReferenceNewTab,
   onRowUpdate,
-  enableInlineEdit = false
+  enableInlineEdit = false,
+  onCreateEmpty,
+  onDuplicateRow
 }: ExcelTableProps<T>, ref: React.Ref<ExcelTableRef>) => {
   const tableRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -254,10 +264,14 @@ const ExcelTableInner = <T extends Record<string, any>>({
   }, []);
 
   const handlePasteCellValue = useCallback(async (rowIndex: number, columnKey: string) => {
-    if (!copiedValue || !onRowUpdate) return;
+    if (!copiedValue || !onRowUpdate) {
+      return;
+    }
 
     const rowData = excelState.filteredData[rowIndex];
-    if (!rowData) return;
+    if (!rowData) {
+      return;
+    }
 
     const rowId = rowData[idField];
 
@@ -295,10 +309,15 @@ const ExcelTableInner = <T extends Record<string, any>>({
         excelActions.expandCell(content, rowIndex, columnKey);
       }
     },
-    // 'i' -> open details
+    // 'i' -> open details (same tab)
     onOpenDetails: (rowIndex, columnKey) => {
       const rowData = excelState.filteredData[rowIndex];
       if (rowData) onView?.(rowIndex, columnKey, rowData);
+    },
+    // 'I' -> open details in new tab
+    onOpenDetailsNewTab: (rowIndex, columnKey) => {
+      const rowData = excelState.filteredData[rowIndex];
+      if (rowData) onViewNewTab?.(rowIndex, columnKey, rowData);
     },
     // 'E' -> edit full record (only in details tab)
     onEditRecord: (rowIndex) => {
@@ -341,7 +360,15 @@ const ExcelTableInner = <T extends Record<string, any>>({
     },
     onCopyCellValue: handleCopyCellValue,
     onPasteCellValue: handlePasteCellValue,
-    onNavigateToReference
+    onNavigateToReference,
+    onNavigateToReferenceNewTab,
+    // Ctrl+D -> duplicate row
+    onDuplicateRow: onDuplicateRow ? (rowIndex) => {
+      const rowData = excelState.filteredData[rowIndex];
+      if (rowData) {
+        onDuplicateRow(rowData);
+      }
+    } : undefined
   });
 
   // Ajustar altura del contenedor de scroll para que llegue al final de la página
@@ -658,6 +685,43 @@ const ExcelTableInner = <T extends Record<string, any>>({
                 })}
               </div>
             ))}
+
+            {/* Fila adicional para crear nuevo registro vacío */}
+            {onCreateEmpty && (
+              <div className="flex border-b border-gray-200 hover:bg-blue-50 transition-colors">
+                {/* Columna de números de fila */}
+                <div
+                  className="flex items-center justify-center text-xs font-medium text-gray-500 bg-gray-50 border-r border-gray-300 sticky left-0 z-10"
+                  style={{ width: '50px', minWidth: '50px', maxWidth: '50px' }}
+                >
+                  <button
+                    onClick={onCreateEmpty}
+                    className="w-full h-full flex items-center justify-center text-blue-600 hover:text-blue-800 hover:bg-blue-100 transition-colors"
+                    title="Añadir nuevo registro"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Celdas vacías para mantener el ancho */}
+                {excelState.visibleColumns.map((column) => (
+                  <div
+                    key={column.key}
+                    className="px-3 py-2 text-sm text-gray-400 cursor-pointer bg-white overflow-hidden text-ellipsis whitespace-nowrap h-10 flex items-center flex-shrink-0 border-r border-gray-200 last:border-r-0"
+                    style={{
+                      width: `${column.width}px`,
+                      minWidth: `${column.width}px`,
+                      maxWidth: `${column.width}px`
+                    }}
+                    onClick={onCreateEmpty}
+                  >
+                    Haz clic en + para añadir
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

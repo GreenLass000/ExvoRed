@@ -95,18 +95,50 @@ const ExvotoDetailPage: React.FC = () => {
                 target.contentEditable === 'true' ||
                 target.getAttribute('role') === 'textbox'
             );
-            
+
             if (isInputField) return;
-            
+
+            // Edit with Shift+E
             if (e.shiftKey && e.key === 'E') {
                 e.preventDefault();
                 handleEditExvoto();
+                return;
+            }
+
+            // Navigation shortcuts (only when not using Ctrl/Alt/Meta)
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+            switch (e.key.toLowerCase()) {
+                case 's':
+                    e.preventDefault();
+                    navigate('/sems');
+                    break;
+                case 'c':
+                    e.preventDefault();
+                    navigate('/catalog');
+                    break;
+                case 'v':
+                    e.preventDefault();
+                    navigate('/exvotos');
+                    break;
+                case 'd':
+                    e.preventDefault();
+                    navigate('/divinities');
+                    break;
+                case 'p':
+                    e.preventDefault();
+                    navigate('/characters');
+                    break;
+                case 'm':
+                    e.preventDefault();
+                    navigate('/miracles');
+                    break;
             }
         };
 
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [handleEditExvoto]);
+    }, [handleEditExvoto, navigate]);
 
     if (loading) {
         return <div className="text-center p-8">Cargando detalles del exvoto...</div>;
@@ -130,8 +162,9 @@ const ExvotoDetailPage: React.FC = () => {
             <div className="p-6 sm:p-8">
                 <div className="flex justify-between items-start gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-800">{exvoto.internal_id || 'N/A'}</h1>
-                        <p className="text-md text-slate-500 mt-1">Virgen/Santo: {exvoto.virgin_or_saint || 'N/A'}</p>
+                        <h1 className="text-3xl font-bold text-slate-800">{exvoto.internal_id || '—'}</h1>
+                        <p className="text-md text-slate-500 mt-1">Virgen/Santo: {exvoto.virgin_or_saint || '—'}</p>
+                        <p className="text-sm text-slate-400 mt-1">ID: {exvoto.id} | Última modificación: {exvoto.updated_at || '—'}</p>
                     </div>
                     <div className="flex items-center gap-2">
                         <button
@@ -177,9 +210,9 @@ const ExvotoDetailPage: React.FC = () => {
                     <div className="space-y-6">
                       <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Ubicación</h2>
                       <dl className="space-y-4">
-                        <DetailField label="Lugar de Ofrenda" value={semNameMap[exvoto.offering_sem_id!] || 'N/A'} />
-                        <DetailField label="Lugar de Origen del Milagro" value={semNameMap[(exvoto as any).origin_sem_id!] || 'N/A'} />
-                        <DetailField label="Lugar de Conservación" value={semNameMap[exvoto.conservation_sem_id!] || 'N/A'} />
+                        <DetailField label="Lugar de Ofrenda (SEM)" value={exvoto.offering_sem_id ? semNameMap[exvoto.offering_sem_id] : null} />
+                        <DetailField label="Lugar de Origen" value={exvoto.lugar_origen} />
+                        <DetailField label="Lugar de Conservación (SEM)" value={exvoto.conservation_sem_id ? semNameMap[exvoto.conservation_sem_id] : null} />
                       </dl>
                     </div>
 
@@ -205,17 +238,15 @@ const ExvotoDetailPage: React.FC = () => {
                       </dl>
                     </div>
                     
-                    {(exvoto.transcription || exvoto.extra_info) && (
-                      <div className="space-y-6">
-                        <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Textos y Notas</h2>
-                        <dl className="space-y-4">
-                           <DetailField label="Transcripción" value={exvoto.transcription ? <p className="whitespace-pre-wrap font-serif italic">{exvoto.transcription}</p> : null} />
-                           <DetailField label="Información Adicional" value={exvoto.extra_info} />
-                           <DetailField label="Uso de Mayúsculas" value={exvoto.text_case} />
-                           <DetailField label="Forma del Texto" value={exvoto.text_form} />
-                        </dl>
-                      </div>
-                    )}
+                    <div className="space-y-6">
+                      <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Textos y Notas</h2>
+                      <dl className="space-y-4">
+                         <DetailField label="Transcripción" value={exvoto.transcription ? <p className="whitespace-pre-wrap font-serif italic">{exvoto.transcription}</p> : null} />
+                         <DetailField label="Información Adicional" value={exvoto.extra_info} />
+                         <DetailField label="Uso de Mayúsculas" value={exvoto.text_case} />
+                         <DetailField label="Forma del Texto" value={exvoto.text_form} />
+                      </dl>
+                    </div>
                   </div>
 
                   {/* Zona imagen */}

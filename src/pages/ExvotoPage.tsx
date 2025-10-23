@@ -58,6 +58,7 @@ const ExvotoPage: React.FC = () => {
   const [newExvotoData, setNewExvotoData] = useState<Omit<Exvoto, 'id'>>(getInitialExvotoData());
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [hasUnsaved, setHasUnsaved] = useState(false);
+  const [duplicateToast, setDuplicateToast] = useState<string | null>(null);
 
   // Modal rápido para crear SEM desde el formulario de Exvoto
   const [isSemModalOpen, setIsSemModalOpen] = useState(false);
@@ -99,7 +100,15 @@ const ExvotoPage: React.FC = () => {
         api.getCharacters(),
         api.getMiracles()
       ]);
-      setExvotos(exvotoData);
+
+      // Ordenar por updated_at descendente (últimos modificados primero)
+      const sortedExvotos = [...exvotoData].sort((a, b) => {
+        const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+        const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      setExvotos(sortedExvotos);
       setSems(semData);
       setCharacters(characterData);
       setMiracles(miracleData);
@@ -212,6 +221,44 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
   };
 
   const handleView = (id: number) => navigate(`/exvoto/${id}`);
+
+  const handleCreateEmpty = async () => {
+    try {
+      const emptyExvoto = getInitialExvotoData();
+      const created = await api.createExvoto(emptyExvoto);
+      setExvotos(prev => [...prev, created]);
+      // Refrescar datos para asegurar consistencia
+      await fetchData();
+    } catch (error) {
+      console.error("Error creating empty exvoto:", error);
+    }
+  };
+
+  const handleDuplicate = async (exvoto: Exvoto) => {
+    try {
+      // Crear una copia sin el ID, preservando el updated_at del original
+      const { id, ...exvotoData } = exvoto;
+      const duplicated = await api.createExvoto(exvotoData);
+
+      // Actualizar estado local sin recargar, manteniendo el orden por updated_at
+      setExvotos(prev => {
+        const newList = [...prev, duplicated];
+        return newList.sort((a, b) => {
+          const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+          const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+          return dateB - dateA;
+        });
+      });
+
+      // Mostrar feedback
+      setDuplicateToast('Exvoto duplicado correctamente');
+      setTimeout(() => setDuplicateToast(null), 3000);
+    } catch (error) {
+      console.error("Error duplicating exvoto:", error);
+      setDuplicateToast('Error al duplicar exvoto');
+      setTimeout(() => setDuplicateToast(null), 3000);
+    }
+  };
 
   const handleOpenModal = () => {
     setEditingExvoto(null);
@@ -613,6 +660,9 @@ return (
           handleEditExvoto(data.id);
         }}
         onView={(rowIndex, columnKey, data) => {
+          navigate(`/exvoto/${data.id}`);
+        }}
+        onViewNewTab={(rowIndex, columnKey, data) => {
           window.open(`/exvoto/${data.id}`, '_blank');
         }}
         onInspect={(rowIndex, columnKey, data) => {
@@ -632,6 +682,13 @@ return (
         onNavigateMiracles={() => navigate('/miracles')}
         onNavigateToReference={(type, id) => {
           if (type === 'sem') {
+            navigate(`/sem/${id}`);
+          } else if (type === 'catalog') {
+            navigate(`/catalog/${id}`);
+          }
+        }}
+        onNavigateToReferenceNewTab={(type, id) => {
+          if (type === 'sem') {
             window.open(`/sem/${id}`, '_blank');
           } else if (type === 'catalog') {
             window.open(`/catalog/${id}`, '_blank');
@@ -641,8 +698,20 @@ return (
         idField="id"
         enableKeyboardNavigation={true}
         onRowUpdate={handleUpdate}
+        onCreateEmpty={handleCreateEmpty}
+        onDuplicateRow={handleDuplicate}
         className="mt-4"
       />
+
+      {/* Toast de feedback para duplicación */}
+      {duplicateToast && (
+        <div className="fixed bottom-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          {duplicateToast}
+        </div>
+      )}
     </div>
   );
 };

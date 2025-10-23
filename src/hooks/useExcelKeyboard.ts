@@ -5,7 +5,8 @@ interface ExcelKeyboardOptions {
   enabled: boolean;
   // New bindings per spec
   onEditCell?: (rowIndex: number, columnKey: string) => void; // 'e'
-  onOpenDetails?: (rowIndex: number, columnKey: string) => void; // 'i'
+  onOpenDetails?: (rowIndex: number, columnKey: string) => void; // 'i' - same tab
+  onOpenDetailsNewTab?: (rowIndex: number, columnKey: string) => void; // 'I' - new tab
   onEditRecord?: (rowIndex: number) => void; // 'E' - only in details
   onNavigateSem?: () => void; // 's'
   onNavigateCatalog?: () => void; // 'c'
@@ -25,11 +26,14 @@ interface ExcelKeyboardOptions {
   onCopy?: (content: string) => void;
   // Foreign key navigation
   onNavigateToReference?: (referenceType: 'sem' | 'catalog', referenceId: number) => void;
+  onNavigateToReferenceNewTab?: (referenceType: 'sem' | 'catalog', referenceId: number) => void;
   // Inline editing support
   onStartInlineEdit?: (rowIndex: number, columnKey: string) => void; // Enter - for inline editing
   // Copy/Paste cell values
   onCopyCellValue?: (rowIndex: number, columnKey: string, value: any) => void; // Ctrl+C
   onPasteCellValue?: (rowIndex: number, columnKey: string) => Promise<void>; // Ctrl+V
+  // Duplicate row
+  onDuplicateRow?: (rowIndex: number) => void; // Ctrl+D
 }
 
 export function useExcelKeyboard<T extends Record<string, any>>(
@@ -43,6 +47,11 @@ export function useExcelKeyboard<T extends Record<string, any>>(
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!options.enabled || !state.isExcelModeEnabled) return;
 
+    // Define modifier keys first
+    const isCtrl = e.ctrlKey;
+    const isShift = e.shiftKey;
+    const isAlt = e.altKey;
+
     // Don't handle keyboard shortcuts if user is typing in an input field
     const target = e.target as HTMLElement;
     const isInputField = target && (
@@ -52,11 +61,16 @@ export function useExcelKeyboard<T extends Record<string, any>>(
       target.contentEditable === 'true' ||
       target.getAttribute('role') === 'textbox'
     );
-    
-    // Permitimos Ctrl+A y Shift+Espacio incluso si hay foco en input, siempre que haya una celda seleccionada
+
+    // Allow Ctrl+C and Ctrl+V always (they work with clipboard)
+    // Allow Ctrl+A and Shift+Space only if there's a selected cell
     if (isInputField) {
-      const allowSpecial = (isCtrl && e.key.toLowerCase() === 'a') || (isShift && e.key === ' ');
-      if (!(allowSpecial && state.selectedCell)) return;
+      const isCopyPaste = isCtrl && ['c', 'v'].includes(e.key.toLowerCase());
+      const isSelectAction = (isCtrl && e.key.toLowerCase() === 'a') || (isShift && e.key === ' ');
+
+      if (!isCopyPaste && (!isSelectAction || !state.selectedCell)) {
+        return;
+      }
     }
 
     const currentTime = Date.now();
@@ -64,16 +78,12 @@ export function useExcelKeyboard<T extends Record<string, any>>(
     lastKeyTime.current = currentTime;
 
     keysPressed.current.add(e.key.toLowerCase());
-    
-    const isCtrl = e.ctrlKey;
-    const isShift = e.shiftKey;
-    const isAlt = e.altKey;
 
     // Prevent default for Excel-specific shortcuts
     const shouldPreventDefault = [
       'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
       'Tab', 'Enter', 'Home', 'End', 'PageUp', 'PageDown'
-    ].includes(e.key) || (isCtrl && ['a', 'c', 'v', 'x', 'z', 'y', 'f'].includes(e.key.toLowerCase()));
+    ].includes(e.key) || (isCtrl && ['a', 'c', 'v', 'd', 'x', 'z', 'y', 'f'].includes(e.key.toLowerCase()));
 
     if (shouldPreventDefault && !isRepeating) {
       e.preventDefault();
@@ -250,18 +260,18 @@ export function useExcelKeyboard<T extends Record<string, any>>(
         break;
 
       case 'i':
-        if (!isRepeating && state.selectedCell && !isCtrl) {
+        if (!isRepeating && state.selectedCell && !isCtrl && !isShift) {
           // Prevent default so the typed 'i' doesn't leak into inputs
           e.preventDefault();
           e.stopPropagation();
           const rowData = state.filteredData[state.selectedCell.rowIndex];
           const columnKey = state.selectedCell.columnKey;
-          
+
           if (rowData) {
             // Check if current cell contains a foreign key reference
             let referenceNavigated = false;
-            
-            // Handle SEM foreign key references
+
+            // Handle SEM foreign key references (navigate in same tab)
             if (columnKey.includes('sem_id') && options.onNavigateToReference) {
               const semId = rowData[columnKey];
               if (semId && typeof semId === 'number') {
@@ -269,8 +279,8 @@ export function useExcelKeyboard<T extends Record<string, any>>(
                 referenceNavigated = true;
               }
             }
-            
-            // Handle Catalog foreign key references
+
+            // Handle Catalog foreign key references (navigate in same tab)
             if (columnKey.includes('catalog_id') && options.onNavigateToReference) {
               const catalogId = rowData[columnKey];
               if (catalogId && typeof catalogId === 'number') {
@@ -278,13 +288,56 @@ export function useExcelKeyboard<T extends Record<string, any>>(
                 referenceNavigated = true;
               }
             }
-            
+
             // If no foreign key reference was found, use default behavior
             if (!referenceNavigated) {
               if (options.onOpenDetails) {
                 options.onOpenDetails(state.selectedCell.rowIndex, state.selectedCell.columnKey);
               } else {
                 options.onInspect?.(state.selectedCell.rowIndex, state.selectedCell.columnKey);
+              }
+            }
+          }
+        }
+        break;
+
+      case 'I':
+        if (!isRepeating && state.selectedCell && !isCtrl) {
+          // Prevent default so the typed 'I' doesn't leak into inputs
+          e.preventDefault();
+          e.stopPropagation();
+          const rowData = state.filteredData[state.selectedCell.rowIndex];
+          const columnKey = state.selectedCell.columnKey;
+
+          if (rowData) {
+            // Check if current cell contains a foreign key reference
+            let referenceNavigated = false;
+
+            // Handle SEM foreign key references (navigate in new tab)
+            if (columnKey.includes('sem_id') && options.onNavigateToReferenceNewTab) {
+              const semId = rowData[columnKey];
+              if (semId && typeof semId === 'number') {
+                options.onNavigateToReferenceNewTab('sem', semId);
+                referenceNavigated = true;
+              }
+            }
+
+            // Handle Catalog foreign key references (navigate in new tab)
+            if (columnKey.includes('catalog_id') && options.onNavigateToReferenceNewTab) {
+              const catalogId = rowData[columnKey];
+              if (catalogId && typeof catalogId === 'number') {
+                options.onNavigateToReferenceNewTab('catalog', catalogId);
+                referenceNavigated = true;
+              }
+            }
+
+            // If no foreign key reference was found, use default behavior (open in new tab)
+            if (!referenceNavigated) {
+              if (options.onOpenDetailsNewTab) {
+                options.onOpenDetailsNewTab(state.selectedCell.rowIndex, state.selectedCell.columnKey);
+              } else if (options.onView) {
+                // Fallback to onView for backward compatibility
+                options.onView(state.selectedCell.rowIndex, state.selectedCell.columnKey);
               }
             }
           }
@@ -321,24 +374,58 @@ export function useExcelKeyboard<T extends Record<string, any>>(
         }
         break;
       case 'c':
-        if (!isRepeating && !isCtrl && !options.blockNavigation) {
-          e.preventDefault();
-          e.stopPropagation();
-          options.onNavigateCatalog?.();
+        if (!isRepeating) {
+          if (isCtrl) {
+            // Ctrl+C: Copy cell value
+            if (state.selectedCell) {
+              const rowData = state.filteredData[state.selectedCell.rowIndex];
+              if (rowData) {
+                const value = rowData[state.selectedCell.columnKey];
+                // Copy the actual value (ID for foreignKey, not the display text)
+                options.onCopyCellValue?.(state.selectedCell.rowIndex, state.selectedCell.columnKey, value);
+                // Legacy onCopy for backwards compatibility
+                const content = String(value || '');
+                options.onCopy?.(content);
+              }
+            }
+          } else if (!options.blockNavigation) {
+            // Just 'c': Navigate to catalogs
+            e.preventDefault();
+            e.stopPropagation();
+            options.onNavigateCatalog?.();
+          }
         }
         break;
       case 'v':
-        if (!isRepeating && !isCtrl && !options.blockNavigation) {
-          e.preventDefault();
-          e.stopPropagation();
-          options.onNavigateExvotos?.();
+        if (!isRepeating) {
+          if (isCtrl) {
+            // Ctrl+V: Paste cell value
+            if (state.selectedCell && options.onPasteCellValue) {
+              options.onPasteCellValue(state.selectedCell.rowIndex, state.selectedCell.columnKey);
+            }
+          } else if (!options.blockNavigation) {
+            // Just 'v': Navigate to exvotos
+            e.preventDefault();
+            e.stopPropagation();
+            options.onNavigateExvotos?.();
+          }
         }
         break;
       case 'd':
-        if (!isRepeating && !isCtrl && !options.blockNavigation) {
-          e.preventDefault();
-          e.stopPropagation();
-          options.onNavigateDivinities?.();
+        if (!isRepeating) {
+          if (isCtrl) {
+            // Ctrl+D: Duplicate current row
+            if (state.selectedCell && options.onDuplicateRow) {
+              e.preventDefault();
+              e.stopPropagation();
+              options.onDuplicateRow(state.selectedCell.rowIndex);
+            }
+          } else if (!options.blockNavigation) {
+            // Just 'd': Navigate to divinities
+            e.preventDefault();
+            e.stopPropagation();
+            options.onNavigateDivinities?.();
+          }
         }
         break;
       case 'p':
@@ -363,28 +450,6 @@ export function useExcelKeyboard<T extends Record<string, any>>(
             case 'a':
               // Select all
               options.onSelectAll?.();
-              break;
-
-            case 'c':
-              // Copy cell value
-              if (state.selectedCell) {
-                const rowData = state.filteredData[state.selectedCell.rowIndex];
-                if (rowData) {
-                  const value = rowData[state.selectedCell.columnKey];
-                  // Copy the actual value (ID for foreignKey, not the display text)
-                  options.onCopyCellValue?.(state.selectedCell.rowIndex, state.selectedCell.columnKey, value);
-                  // Legacy onCopy for backwards compatibility
-                  const content = String(value || '');
-                  options.onCopy?.(content);
-                }
-              }
-              break;
-
-            case 'v':
-              // Paste cell value
-              if (state.selectedCell && options.onPasteCellValue) {
-                options.onPasteCellValue(state.selectedCell.rowIndex, state.selectedCell.columnKey);
-              }
               break;
 
             case 'p':
