@@ -7,6 +7,7 @@ import { ExcelTable, ExcelTableRef } from '../components/excel';
 import { PlusIcon } from '../components/icons';
 import Modal from '../components/Modal';
 import SearchBar from '../components/SearchBar';
+import RichTextEditor from '../components/RichTextEditor';
 import { Sem } from '../types';
 import * as api from '../services/api';
 import { useNewShortcut } from '../hooks/useGlobalShortcut';
@@ -243,12 +244,14 @@ const SemPage: React.FC = () => {
       <div key={name}>
         <label htmlFor={name} className="block text-sm font-medium text-slate-700">{label}</label>
         {type === 'textarea' ? (
-          <textarea
-            name={name}
+          <RichTextEditor
             id={name}
-            value={value as string}
-            onChange={handleFormChange}
-            className={commonClass}
+            name={name}
+            value={String(value ?? '')}
+            onChange={(newValue) => {
+              const event = { target: { name, value: newValue } } as React.ChangeEvent<any>;
+              handleFormChange(event);
+            }}
             rows={3}
           />
         ) : (

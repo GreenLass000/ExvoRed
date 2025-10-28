@@ -11,6 +11,7 @@ import Modal from '../components/Modal';
 import TagSelect from '../components/TagSelect';
 import SearchBar from '../components/SearchBar';
 import EpochSelector from '../components/EpochSelector';
+import RichTextEditor from '../components/RichTextEditor';
 import { Exvoto, Sem, Character, Miracle } from '../types';
 import { calculateEpochFromDate } from '../utils/epochUtils';
 import * as api from '../services/api';
@@ -362,7 +363,16 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
       return (
         <div key={name}>
           <label htmlFor={name} className="block text-sm font-medium text-slate-700">{label}</label>
-          <textarea id={name} name={name} value={value ?? ''} onChange={handleFormChange} className={commonClass} rows={3} />
+          <RichTextEditor
+            id={name}
+            name={name}
+            value={String(value ?? '')}
+            onChange={(newValue) => {
+              const event = { target: { name, value: newValue } } as React.ChangeEvent<any>;
+              handleFormChange(event);
+            }}
+            rows={3}
+          />
         </div>
       );
     }

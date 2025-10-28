@@ -6,6 +6,7 @@ import { ExcelTable, ExcelTableRef } from '../components/excel';
 import { PlusIcon } from '../components/icons';
 import Modal from '../components/Modal';
 import SearchBar from '../components/SearchBar';
+import RichTextEditor from '../components/RichTextEditor';
 import { Catalog, Sem, CatalogSem } from '../types';
 import * as api from '../services/api';
 import { calculateCatalogStatistics } from '../utils';
@@ -300,12 +301,14 @@ const CatalogPage: React.FC = () => {
             <div>
                 <label htmlFor={name} className="block text-sm font-medium text-slate-700">{label}</label>
                 {type === 'textarea' ? (
-                    <textarea
-                        name={name}
+                    <RichTextEditor
                         id={name}
-                        value={value as string}
-                        onChange={handleFormChange}
-                        className={commonClass}
+                        name={name}
+                        value={String(value ?? '')}
+                        onChange={(newValue) => {
+                            const event = { target: { name, value: newValue } } as React.ChangeEvent<any>;
+                            handleFormChange(event);
+                        }}
                         rows={3}
                     />
                 ) : (

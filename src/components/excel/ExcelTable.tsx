@@ -8,6 +8,7 @@ import ColumnVisibilityPanel from './ColumnVisibilityPanel';
 import DraggableColumn from './DraggableColumn';
 import ColumnHeader from './ColumnHeader';
 import CellModal from './CellModal';
+import { EditCellModal } from './EditCellModal';
 import { highlightText } from '../../utils/highlightText';
 
 interface ExcelTableProps<T> {
@@ -104,6 +105,10 @@ const ExcelTableInner = <T extends Record<string, any>>({
   const [copiedValue, setCopiedValue] = useState<{ value: any; columnKey: string; rowIndex: number } | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [pasteStatus, setPasteStatus] = useState<{ rowIndex: number; columnKey: string } | null>(null);
+
+  // Edit Modal state (for 'e' key)
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editModalData, setEditModalData] = useState<{ rowIndex: number; columnKey: string; value: any } | null>(null);
   
   // Focus on editing input when entering edit mode
   useEffect(() => {
@@ -297,15 +302,14 @@ const ExcelTableInner = <T extends Record<string, any>>({
   // Keyboard navigation
   useExcelKeyboard(excelState, excelActions, {
     enabled: enableKeyboardNavigation,
-    // 'e' -> edit cell - start inline editing if onRowUpdate available, otherwise expand cell
+    // 'e' -> edit cell - open modal for editing
     onEditCell: (rowIndex, columnKey) => {
       const rowData = excelState.filteredData[rowIndex];
       if (rowData && onRowUpdate && columnKey !== 'id') {
-        // Get the actual cell value
+        // Open modal for editing
         const cellValue = rowData[columnKey];
-        // Start inline edit mode for this cell with the current value
-        setEditingInlineCell({ rowIndex, columnKey });
-        setEditValue(cellValue); // Use the actual value, not converted to string
+        setEditModalData({ rowIndex, columnKey, value: cellValue });
+        setShowEditModal(true);
       } else if (rowData) {
         // Fallback to readonly cell modal
         const content = String(rowData[columnKey] ?? '');
@@ -631,8 +635,12 @@ const ExcelTableInner = <T extends Record<string, any>>({
                       data-cell={`${rowIndex}-${column.key}`}
                       className={cn(
                         "px-3 py-2 text-sm text-gray-900 cursor-cell bg-white",
-                        "overflow-hidden text-ellipsis whitespace-nowrap h-10 flex items-center flex-shrink-0",
                         "border-r border-gray-200 last:border-r-0",
+                        // Diferentes estilos si está editando o no
+                        isEditingThisCell
+                          ? "min-h-[80px] items-start overflow-visible whitespace-normal break-words"
+                          : "overflow-hidden text-ellipsis whitespace-nowrap h-10 items-center",
+                        "flex flex-shrink-0",
                         // Special styling for foreign key cells
                         (column.key.includes('sem_id') || column.key.includes('catalog_id')) &&
                         item[column.key] &&
@@ -669,6 +677,16 @@ const ExcelTableInner = <T extends Record<string, any>>({
                               <option key={fk.id} value={fk.id}>{fk.name || `#${fk.id}`}</option>
                             ))}
                           </select>
+                        ) : columnDef?.type === 'truncated' || (String(editValue ?? '').length > 100) ? (
+                          <textarea
+                            ref={inputRef as React.Ref<HTMLTextAreaElement>}
+                            value={editValue ?? ''}
+                            onChange={handleEditChange}
+                            onBlur={handleInputBlur}
+                            onKeyDown={handleInputKeyDown}
+                            className="w-full min-h-[60px] px-2 py-1 border border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded text-sm resize-none"
+                            rows={4}
+                          />
                         ) : (
                           <input
                             ref={inputRef as React.Ref<HTMLInputElement>}
@@ -748,6 +766,33 @@ const ExcelTableInner = <T extends Record<string, any>>({
           rowIndex={excelState.expandedCell.rowIndex}
           columnKey={excelState.expandedCell.columnKey}
           onClose={excelActions.closeCellModal}
+        />
+      )}
+
+      {/* Edit Modal (for 'e' key - edit mode with rich text support) */}
+      {editModalData && (
+        <EditCellModal
+          isOpen={showEditModal}
+          title={columns.find(col => String(col.key) === editModalData.columnKey)?.header || editModalData.columnKey}
+          rowIndex={editModalData.rowIndex}
+          columnKey={editModalData.columnKey}
+          initialValue={editModalData.value}
+          column={columns.find(col => String(col.key) === editModalData.columnKey)}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditModalData(null);
+          }}
+          onSave={async (newValue) => {
+            if (onRowUpdate && editModalData) {
+              const rowData = excelState.filteredData[editModalData.rowIndex];
+              if (rowData) {
+                const rowId = rowData[idField];
+                await onRowUpdate(rowId, { [editModalData.columnKey]: newValue } as Partial<T>);
+              }
+            }
+            setShowEditModal(false);
+            setEditModalData(null);
+          }}
         />
       )}
     </div>

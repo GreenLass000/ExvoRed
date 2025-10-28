@@ -4,6 +4,7 @@ import { ColumnDef } from '../components/DataTable';
 import { ExcelTable, ExcelTableRef } from '../components/excel';
 import Modal from '../components/Modal';
 import SearchBar from '../components/SearchBar';
+import RichTextEditor from '../components/RichTextEditor';
 import { PlusIcon } from '../components/icons';
 import * as api from '../services/api';
 import { Divinity } from '../types';
@@ -263,41 +264,49 @@ const DivinitiesPage: React.FC = () => {
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-slate-700">Atributos / Especialidad</label>
-              <textarea
+              <RichTextEditor
                 name="attributes"
                 value={newDivinityData.attributes || ''}
-                onChange={handleFormChange}
-                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                onChange={(newValue) => {
+                  const event = { target: { name: 'attributes', value: newValue } } as React.ChangeEvent<any>;
+                  handleFormChange(event);
+                }}
                 rows={2}
               />
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-slate-700">Historia</label>
-              <textarea
+              <RichTextEditor
                 name="history"
                 value={newDivinityData.history || ''}
-                onChange={handleFormChange}
-                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                onChange={(newValue) => {
+                  const event = { target: { name: 'history', value: newValue } } as React.ChangeEvent<any>;
+                  handleFormChange(event);
+                }}
                 rows={3}
               />
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-slate-700">Representación</label>
-              <textarea
+              <RichTextEditor
                 name="representation"
                 value={newDivinityData.representation || ''}
-                onChange={handleFormChange}
-                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                onChange={(newValue) => {
+                  const event = { target: { name: 'representation', value: newValue } } as React.ChangeEvent<any>;
+                  handleFormChange(event);
+                }}
                 rows={2}
               />
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-slate-700">Comentarios</label>
-              <textarea
+              <RichTextEditor
                 name="comments"
                 value={newDivinityData.comments || ''}
-                onChange={handleFormChange}
-                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                onChange={(newValue) => {
+                  const event = { target: { name: 'comments', value: newValue } } as React.ChangeEvent<any>;
+                  handleFormChange(event);
+                }}
                 rows={2}
               />
             </div>

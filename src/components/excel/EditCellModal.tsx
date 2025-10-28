@@ -1,6 +1,7 @@
 import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { cn } from '../../lib/utils';
 import { ColumnDef } from '../DataTable';
+import RichTextEditor from '../RichTextEditor';
 
 interface EditCellModalProps {
   isOpen: boolean;
@@ -110,7 +111,10 @@ export const EditCellModal: React.FC<EditCellModalProps> = ({
 
   if (!isOpen) return null;
 
-  const isLongText = typeof editValue === 'string' && (editValue.length > 100 || editValue.includes('\n'));
+  // Usar RichTextEditor para campos de tipo 'truncated' (transcripciones, comentarios largos, etc.) o textos largos
+  const shouldUseRichTextEditor =
+    column?.type === 'truncated' ||
+    (typeof editValue === 'string' && (editValue.length > 100 || editValue.includes('\n')));
 
   return (
     <div
@@ -240,22 +244,13 @@ export const EditCellModal: React.FC<EditCellModalProps> = ({
                     <option key={fk.id} value={fk.id}>{fk.name || `SEM #${fk.id}`}</option>
                   ))}
                 </select>
-              ) : isLongText ? (
-                <textarea
-                  ref={inputRef as React.Ref<HTMLTextAreaElement>}
-                  value={editValue ?? ''}
-                  onChange={handleEditChange}
-                  onKeyDown={handleInputKeyDown}
+              ) : shouldUseRichTextEditor ? (
+                <RichTextEditor
+                  value={String(editValue ?? '')}
+                  onChange={(newValue) => setEditValue(newValue)}
                   disabled={saving}
-                  rows={6}
-                  className={cn(
-                    "w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md",
-                    "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100",
-                    "text-sm leading-relaxed resize-none",
-                    "focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent",
-                    "disabled:opacity-50 disabled:cursor-not-allowed"
-                  )}
-                  spellCheck={false}
+                  rows={8}
+                  placeholder="Escribe aquí..."
                 />
               ) : (
                 <input
