@@ -46,6 +46,8 @@ interface ExcelTableProps<T> {
   onCreateEmpty?: () => Promise<void>;
   // Duplicate row
   onDuplicateRow?: (data: T) => Promise<void>;
+  // Page config persistence
+  pageId?: string;
 }
 
 export interface ExcelTableRef {
@@ -83,13 +85,14 @@ const ExcelTableInner = <T extends Record<string, any>>({
   onRowUpdate,
   enableInlineEdit = false,
   onCreateEmpty,
-  onDuplicateRow
+  onDuplicateRow,
+  pageId
 }: ExcelTableProps<T>, ref: React.Ref<ExcelTableRef>) => {
   const tableRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  
+
   // Excel mode state and actions
-  const [excelState, excelActions] = useExcelMode(columns, data, idField);
+  const [excelState, excelActions] = useExcelMode(columns, data, idField, pageId);
 
   // Inline editing state
   const [editingInlineCell, setEditingInlineCell] = useState<{ rowIndex: number; columnKey: string } | null>(null);
@@ -732,6 +735,8 @@ const ExcelTableInner = <T extends Record<string, any>>({
         onToggleColumn={excelActions.toggleColumnVisibility}
         onClose={excelActions.toggleColumnPanel}
         isOpen={excelState.showColumnPanel}
+        onResetConfig={excelActions.resetPageConfig}
+        hasStoredConfig={excelActions.hasStoredConfig}
       />
 
       {/* Cell Modal (only for view mode - when no onRowUpdate or for 'id' column) */}

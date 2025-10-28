@@ -656,6 +656,7 @@ return (
         data={filteredExvotos.length > 0 || searchQuery ? filteredExvotos : exvotos}
         columns={columns}
         searchQuery={searchQuery}
+        pageId="exvotos"
         onEdit={(rowIndex, columnKey, data) => {
           handleEditExvoto(data.id);
         }}

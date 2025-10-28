@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { ColumnDef } from '../components/DataTable';
+import { usePageConfig } from './usePageConfig';
 
 export interface ExcelColumnSettings {
   key: string;
@@ -58,48 +59,57 @@ export interface ExcelModeState<T> {
 export interface ExcelModeActions<T> {
   // Mode toggle
   toggleExcelMode: () => void;
-  
+
   // Column management
   toggleColumnVisibility: (columnKey: string) => void;
   resizeColumn: (columnKey: string, width: number) => void;
   reorderColumns: (oldIndex: number, newIndex: number) => void;
   resetColumns: () => void;
-  
+
   // Sorting and filtering
   sortByColumn: (columnKey: string, direction?: 'asc' | 'desc') => void;
   addFilter: (filter: ExcelFilter) => void;
   removeFilter: (columnKey: string) => void;
   clearAllFilters: () => void;
-  
+
   // Cell customization
   setCellColor: (rowId: string | number, columnKey: string, backgroundColor: string) => void;
   removeCellColor: (rowId: string | number, columnKey: string) => void;
   clearAllCellColors: () => void;
-  
+
   // Navigation
   selectCell: (rowIndex: number, columnKey: string) => void;
   navigateCell: (direction: 'up' | 'down' | 'left' | 'right') => void;
   toggleRowSelection: (rowId: string | number) => void;
   clearSelection: () => void;
-  
+
   // Modal and expanded views
   expandCell: (content: string, rowIndex: number, columnKey: string) => void;
   closeCellModal: () => void;
-  
+
   // Layout
   setScrollPosition: (x: number, y: number) => void;
   setContainerWidth: (width: number) => void;
-  
+
   // Panel management
   toggleColumnPanel: () => void;
+
+  // Page config management
+  resetPageConfig: () => void;
+  hasStoredConfig: boolean;
 }
 
 export function useExcelMode<T extends Record<string, any>>(
   initialColumns: ColumnDef<T>[],
   data: T[],
-  idField: keyof T = 'id' as keyof T
+  idField: keyof T = 'id' as keyof T,
+  pageId?: string
 ): [ExcelModeState<T>, ExcelModeActions<T>] {
-  
+
+  // Page config persistence
+  const pageConfig = pageId ? usePageConfig(pageId) : null;
+  const configLoadedRef = useRef(false);
+
   // Initialize column settings
   const initializeColumns = useCallback((): ExcelColumnSettings[] => {
     return initialColumns.map((col, index) => ({
@@ -112,11 +122,58 @@ export function useExcelMode<T extends Record<string, any>>(
     }));
   }, [initialColumns]);
 
+  // Load saved config or use defaults
+  const loadInitialState = useCallback(() => {
+    if (!pageConfig) {
+      return {
+        columns: initializeColumns(),
+        sortColumn: null,
+        sortDirection: null,
+        filters: []
+      };
+    }
+
+    const savedConfig = pageConfig.loadConfig();
+    if (savedConfig) {
+      // Merge saved config with current column definitions to handle schema changes
+      const currentKeys = initialColumns.map(col => String(col.key));
+      const savedColumns = savedConfig.columns.filter(col => currentKeys.includes(col.key));
+
+      // Add any new columns that weren't in the saved config
+      const savedKeys = savedColumns.map(col => col.key);
+      const newColumns = initialColumns
+        .filter(col => !savedKeys.includes(String(col.key)))
+        .map((col, index) => ({
+          key: String(col.key),
+          visible: true,
+          width: col.width || 150,
+          order: savedColumns.length + index,
+          sortDirection: null,
+          locked: col.key === 'actions' || col.locked || false
+        }));
+
+      return {
+        columns: [...savedColumns, ...newColumns],
+        sortColumn: savedConfig.sortColumn,
+        sortDirection: savedConfig.sortDirection,
+        filters: savedConfig.filters
+      };
+    }
+
+    return {
+      columns: initializeColumns(),
+      sortColumn: null,
+      sortDirection: null,
+      filters: []
+    };
+  }, [pageConfig, initializeColumns, initialColumns]);
+
   // State
-  const [columns, setColumns] = useState<ExcelColumnSettings[]>(initializeColumns);
-  const [sortColumn, setSortColumn] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
-  const [filters, setFilters] = useState<ExcelFilter[]>([]);
+  const initialState = loadInitialState();
+  const [columns, setColumns] = useState<ExcelColumnSettings[]>(initialState.columns);
+  const [sortColumn, setSortColumn] = useState<string | null>(initialState.sortColumn);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(initialState.sortDirection);
+  const [filters, setFilters] = useState<ExcelFilter[]>(initialState.filters);
   const [cellCustomizations, setCellCustomizations] = useState<ExcelCellCustomization[]>([]);
   const [selectedCell, setSelectedCell] = useState<{ rowIndex: number; columnKey: string } | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<string | number>>(new Set());
@@ -125,6 +182,23 @@ export function useExcelMode<T extends Record<string, any>>(
   const [isExcelModeEnabled, setIsExcelModeEnabled] = useState(true);
   const [showColumnPanel, setShowColumnPanel] = useState(false);
   const [expandedCell, setExpandedCell] = useState<{ content: string; rowIndex: number; columnKey: string } | null>(null);
+
+  // Track if config has been loaded to avoid saving on initial render
+  useEffect(() => {
+    configLoadedRef.current = true;
+  }, []);
+
+  // Auto-save config when relevant state changes
+  useEffect(() => {
+    if (!pageConfig || !configLoadedRef.current) return;
+
+    pageConfig.saveConfig({
+      columns,
+      filters,
+      sortColumn,
+      sortDirection
+    });
+  }, [columns, filters, sortColumn, sortDirection, pageConfig]);
 
   // Memoized calculations
   const visibleColumns = useMemo(() => {
@@ -294,7 +368,8 @@ export function useExcelMode<T extends Record<string, any>>(
     }, []),
     
     resetColumns: useCallback(() => {
-      setColumns(initializeColumns());
+      const defaultColumns = initializeColumns();
+      setColumns(defaultColumns);
       setSortColumn(null);
       setSortDirection(null);
       setFilters([]);
@@ -428,7 +503,21 @@ export function useExcelMode<T extends Record<string, any>>(
     // Panel management
     toggleColumnPanel: useCallback(() => {
       setShowColumnPanel(prev => !prev);
-    }, [])
+    }, []),
+
+    // Page config management
+    resetPageConfig: useCallback(() => {
+      if (pageConfig) {
+        pageConfig.clearConfig();
+      }
+      const defaultColumns = initializeColumns();
+      setColumns(defaultColumns);
+      setSortColumn(null);
+      setSortDirection(null);
+      setFilters([]);
+    }, [pageConfig, initializeColumns]),
+
+    hasStoredConfig: pageConfig?.hasStoredConfig() ?? false
   };
 
   const state: ExcelModeState<T> = {

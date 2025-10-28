@@ -397,6 +397,7 @@ const CatalogPage: React.FC = () => {
                     return col;
                 })}
                 searchQuery={searchQuery}
+                pageId="catalogs"
                 onEdit={(rowIndex, columnKey, data) => {
                   handleEditCatalog(data.id);
                 }}

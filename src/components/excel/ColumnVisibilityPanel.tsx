@@ -8,6 +8,8 @@ interface ColumnVisibilityPanelProps {
   onClose: () => void;
   isOpen: boolean;
   className?: string;
+  onResetConfig?: () => void;
+  hasStoredConfig?: boolean;
 }
 
 export const ColumnVisibilityPanel: React.FC<ColumnVisibilityPanelProps> = ({
@@ -15,7 +17,9 @@ export const ColumnVisibilityPanel: React.FC<ColumnVisibilityPanelProps> = ({
   onToggleColumn,
   onClose,
   isOpen,
-  className = ''
+  className = '',
+  onResetConfig,
+  hasStoredConfig = false
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -105,8 +109,16 @@ export const ColumnVisibilityPanel: React.FC<ColumnVisibilityPanelProps> = ({
         </div>
 
         {/* Stats */}
-        <div className="px-6 py-3 bg-gray-50 dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-300">
-          {visibleCount} de {totalCount} columnas visibles
+        <div className="px-6 py-3 bg-gray-50 dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 flex items-center justify-between">
+          <span>{visibleCount} de {totalCount} columnas visibles</span>
+          {hasStoredConfig && (
+            <span className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Configuración guardada
+            </span>
+          )}
         </div>
 
         {/* Search */}
@@ -238,10 +250,33 @@ export const ColumnVisibilityPanel: React.FC<ColumnVisibilityPanelProps> = ({
 
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            Las columnas bloqueadas no pueden ocultarse
+          <div className="flex items-center gap-3">
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              Las columnas bloqueadas no pueden ocultarse
+            </div>
+
+            {onResetConfig && hasStoredConfig && (
+              <button
+                onClick={() => {
+                  if (confirm('¿Restablecer la configuración de esta página a los valores por defecto?')) {
+                    onResetConfig();
+                    onClose();
+                  }
+                }}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-medium",
+                  "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300",
+                  "hover:bg-orange-200 dark:hover:bg-orange-900/50",
+                  "rounded-md transition-colors",
+                  "focus:outline-none focus:ring-2 focus:ring-orange-500"
+                )}
+                title="Restablecer configuración a valores por defecto"
+              >
+                Restablecer configuración
+              </button>
+            )}
           </div>
-          
+
           <button
             onClick={onClose}
             className={cn(

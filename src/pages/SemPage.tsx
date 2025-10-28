@@ -331,6 +331,7 @@ const SemPage: React.FC = () => {
         data={filteredSems.length > 0 || searchQuery ? filteredSems : sems}
         columns={columns}
         searchQuery={searchQuery}
+        pageId="sems"
         onEdit={(rowIndex, columnKey, data) => {
           handleEditSem(data.id);
         }}

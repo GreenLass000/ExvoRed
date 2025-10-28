@@ -21,7 +21,7 @@
 - [x] Boton para duplicar fila
 - [x] Permitir copiar texto
 - [x] Tiene que ordenarse por defecto por ultimo modificado
-- [ ] Guardar un estado de configuraciones, como filtros activos por pagina, etc...
+- [x] Guardar un estado de configuraciones, como filtros activos por pagina, etc...
 - [ ] En modo vista que no se vea el id, que se vea el texto bueno
 
 ## Bugs

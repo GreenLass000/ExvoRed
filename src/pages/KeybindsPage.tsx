@@ -106,8 +106,8 @@ const KeybindsPage: React.FC = () => {
     { label: 'Ver contenido de la celda', keys: ['Enter'] },
     { label: 'Editar la celda', keys: ['e'] },
     { label: 'Editar registro completo (solo en detalle)', keys: ['E', <><K>Shift</K> + <K>e</K></>] },
-    { label: 'Ver detalles / navegar a referencia (en la misma pestaña)', keys: ['i'] },
-    { label: 'Ver detalles / navegar a referencia (en nueva pestaña)', keys: ['I', <><K>Shift</K> + <K>I</K></>] },
+    { label: 'Ver detalles / navegar a referencia (en nueva pestaña)', keys: ['i'] },
+    { label: 'Ver detalles / navegar a referencia (en la misma pestaña)', keys: ['I', <><K>Shift</K> + <K>i</K></>] },
     { label: 'Seleccionar / deseleccionar fila', keys: [<><K>Shift</K> + <K>Espacio</K></>] },
     { label: 'Cerrar diálogos, paneles o limpiar selección', keys: ['Esc'] }
   ];

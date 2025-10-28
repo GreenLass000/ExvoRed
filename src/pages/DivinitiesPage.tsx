@@ -316,6 +316,7 @@ const DivinitiesPage: React.FC = () => {
         data={filteredDivinities.length > 0 || searchQuery ? filteredDivinities : divinities}
         columns={columns}
         searchQuery={searchQuery}
+        pageId="divinities"
         onEdit={(rowIndex, columnKey, data) => {
           handleEditDivinity(data.id);
         }}

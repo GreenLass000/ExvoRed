@@ -5,8 +5,8 @@ interface ExcelKeyboardOptions {
   enabled: boolean;
   // New bindings per spec
   onEditCell?: (rowIndex: number, columnKey: string) => void; // 'e'
-  onOpenDetails?: (rowIndex: number, columnKey: string) => void; // 'i' - same tab
-  onOpenDetailsNewTab?: (rowIndex: number, columnKey: string) => void; // 'I' - new tab
+  onOpenDetails?: (rowIndex: number, columnKey: string) => void; // 'I' - same tab (uppercase)
+  onOpenDetailsNewTab?: (rowIndex: number, columnKey: string) => void; // 'i' - new tab (lowercase)
   onEditRecord?: (rowIndex: number) => void; // 'E' - only in details
   onNavigateSem?: () => void; // 's'
   onNavigateCatalog?: () => void; // 'c'
@@ -271,30 +271,31 @@ export function useExcelKeyboard<T extends Record<string, any>>(
             // Check if current cell contains a foreign key reference
             let referenceNavigated = false;
 
-            // Handle SEM foreign key references (navigate in same tab)
-            if (columnKey.includes('sem_id') && options.onNavigateToReference) {
+            // Handle SEM foreign key references (navigate in NEW TAB)
+            if (columnKey.includes('sem_id') && options.onNavigateToReferenceNewTab) {
               const semId = rowData[columnKey];
               if (semId && typeof semId === 'number') {
-                options.onNavigateToReference('sem', semId);
+                options.onNavigateToReferenceNewTab('sem', semId);
                 referenceNavigated = true;
               }
             }
 
-            // Handle Catalog foreign key references (navigate in same tab)
-            if (columnKey.includes('catalog_id') && options.onNavigateToReference) {
+            // Handle Catalog foreign key references (navigate in NEW TAB)
+            if (columnKey.includes('catalog_id') && options.onNavigateToReferenceNewTab) {
               const catalogId = rowData[columnKey];
               if (catalogId && typeof catalogId === 'number') {
-                options.onNavigateToReference('catalog', catalogId);
+                options.onNavigateToReferenceNewTab('catalog', catalogId);
                 referenceNavigated = true;
               }
             }
 
-            // If no foreign key reference was found, use default behavior
+            // If no foreign key reference was found, use default behavior (open in new tab)
             if (!referenceNavigated) {
-              if (options.onOpenDetails) {
-                options.onOpenDetails(state.selectedCell.rowIndex, state.selectedCell.columnKey);
-              } else {
-                options.onInspect?.(state.selectedCell.rowIndex, state.selectedCell.columnKey);
+              if (options.onOpenDetailsNewTab) {
+                options.onOpenDetailsNewTab(state.selectedCell.rowIndex, state.selectedCell.columnKey);
+              } else if (options.onView) {
+                // Fallback to onView for backward compatibility
+                options.onView(state.selectedCell.rowIndex, state.selectedCell.columnKey);
               }
             }
           }
@@ -313,31 +314,30 @@ export function useExcelKeyboard<T extends Record<string, any>>(
             // Check if current cell contains a foreign key reference
             let referenceNavigated = false;
 
-            // Handle SEM foreign key references (navigate in new tab)
-            if (columnKey.includes('sem_id') && options.onNavigateToReferenceNewTab) {
+            // Handle SEM foreign key references (navigate in SAME TAB)
+            if (columnKey.includes('sem_id') && options.onNavigateToReference) {
               const semId = rowData[columnKey];
               if (semId && typeof semId === 'number') {
-                options.onNavigateToReferenceNewTab('sem', semId);
+                options.onNavigateToReference('sem', semId);
                 referenceNavigated = true;
               }
             }
 
-            // Handle Catalog foreign key references (navigate in new tab)
-            if (columnKey.includes('catalog_id') && options.onNavigateToReferenceNewTab) {
+            // Handle Catalog foreign key references (navigate in SAME TAB)
+            if (columnKey.includes('catalog_id') && options.onNavigateToReference) {
               const catalogId = rowData[columnKey];
               if (catalogId && typeof catalogId === 'number') {
-                options.onNavigateToReferenceNewTab('catalog', catalogId);
+                options.onNavigateToReference('catalog', catalogId);
                 referenceNavigated = true;
               }
             }
 
-            // If no foreign key reference was found, use default behavior (open in new tab)
+            // If no foreign key reference was found, use default behavior (same tab)
             if (!referenceNavigated) {
-              if (options.onOpenDetailsNewTab) {
-                options.onOpenDetailsNewTab(state.selectedCell.rowIndex, state.selectedCell.columnKey);
-              } else if (options.onView) {
-                // Fallback to onView for backward compatibility
-                options.onView(state.selectedCell.rowIndex, state.selectedCell.columnKey);
+              if (options.onOpenDetails) {
+                options.onOpenDetails(state.selectedCell.rowIndex, state.selectedCell.columnKey);
+              } else {
+                options.onInspect?.(state.selectedCell.rowIndex, state.selectedCell.columnKey);
               }
             }
           }
