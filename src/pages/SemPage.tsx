@@ -51,6 +51,10 @@ const SemPage: React.FC = () => {
   const [filteredSems, setFilteredSems] = useState<Sem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const itemsPerPage = 100;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSem, setEditingSem] = useState<Sem | null>(null);
   const [newSemData, setNewSemData] = useState<Omit<Sem, 'id'>>(getInitialSemData());
@@ -73,19 +77,15 @@ const SemPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (page: number) => {
     setLoading(true);
     try {
-      const data = await api.getSems();
+      const response = await api.getSems(page, itemsPerPage);
 
-      // Ordenar por updated_at descendente (últimos modificados primero)
-      const sortedSems = [...data].sort((a, b) => {
-        const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-        const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-        return dateB - dateA;
-      });
-
-      setSems(sortedSems);
+      setSems(response.data);
+      setTotalPages(response.pagination.totalPages);
+      setTotalRecords(response.pagination.total);
+      setCurrentPage(response.pagination.page);
     } catch (error) {
       console.error("Error fetching sems:", error);
       showToast('Error al cargar los datos. Por favor, recarga la página.', 'error');
@@ -95,8 +95,15 @@ const SemPage: React.FC = () => {
   }, [showToast]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchData(currentPage);
+  }, [currentPage, fetchData]);
+
+  // Función para cambiar de página
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
 
   // Handle URL parameters for edit mode
   useEffect(() => {
@@ -378,6 +385,48 @@ const SemPage: React.FC = () => {
         onDuplicateRow={handleDuplicate}
         className="mt-4"
       />
+
+      {/* Controles de paginación */}
+      {!searchQuery && totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-4">
+          <div className="text-sm text-slate-600">
+            Mostrando {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalRecords)} de {totalRecords} SEMs
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handlePageChange(1)}
+              disabled={currentPage === 1}
+              className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              ««
+            </button>
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              « Anterior
+            </button>
+            <span className="px-4 py-2 text-sm text-slate-700">
+              Página {currentPage} de {totalPages}
+            </span>
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Siguiente »
+            </button>
+            <button
+              onClick={() => handlePageChange(totalPages)}
+              disabled={currentPage === totalPages}
+              className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              »»
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Toast de feedback unificado */}
       {toast && (

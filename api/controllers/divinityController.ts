@@ -1,14 +1,34 @@
 import { Request, Response } from 'express';
-import { eq } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { divinity, divinitySem } from '../db/schema.js';
 
 export const divinityController = {
-  // GET /api/divinities - Obtener todas las divinidades
+  // GET /api/divinities - Obtener todas las divinidades con paginación
   async getAll(req: Request, res: Response) {
     try {
-      const rows = await db.select().from(divinity);
-      res.json(rows);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = (page - 1) * limit;
+
+      const rows = await db.select().from(divinity)
+        .orderBy(desc(divinity.updated_at))
+        .limit(limit)
+        .offset(offset);
+
+      // Obtener el total de registros
+      const totalResult = await db.select({ count: sql<number>`COUNT(*)` }).from(divinity);
+      const total = totalResult[0]?.count || 0;
+
+      res.json({
+        data: rows,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
     } catch (error) {
       console.error('Error fetching divinities:', error);
       res.status(500).json({ error: 'Failed to fetch divinities' });

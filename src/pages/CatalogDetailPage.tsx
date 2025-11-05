@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Catalog } from '../types';
 import * as api from '../services/api';
-import { calculateCatalogStatistics } from '../utils';
 
 const CatalogDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -13,26 +12,15 @@ const CatalogDetailPage: React.FC = () => {
     useEffect(() => {
         const fetchCatalog = async () => {
             if (!id) return;
-            
+
             setLoading(true);
             try {
-                const catalogs = await api.getCatalogs();
-                const foundCatalog = catalogs.find(c => c.id === parseInt(id));
-                
-                if (foundCatalog) {
-                    // Calcular estadísticas dinámicamente
-                    const stats = await calculateCatalogStatistics(foundCatalog.id);
-                    const catalogWithStats = {
-                        ...foundCatalog,
-                        exvoto_count: stats.exvoto_count,
-                        related_places: stats.related_places
-                    };
-                    setCatalog(catalogWithStats);
-                } else {
-                    setCatalog(null);
-                }
+                // Obtener el catálogo directamente por ID
+                const foundCatalog = await api.getCatalogById(parseInt(id));
+                setCatalog(foundCatalog);
             } catch (error) {
                 console.error('Error fetching catalog:', error);
+                setCatalog(null);
             } finally {
                 setLoading(false);
             }

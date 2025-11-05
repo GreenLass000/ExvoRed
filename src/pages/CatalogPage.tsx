@@ -7,9 +7,8 @@ import { PlusIcon } from '../components/icons';
 import Modal from '../components/Modal';
 import SearchBar from '../components/SearchBar';
 import RichTextEditor from '../components/RichTextEditor';
-import { Catalog, Sem, CatalogSem } from '../types';
+import { Catalog } from '../types';
 import * as api from '../services/api';
-import { calculateCatalogStatistics } from '../utils';
 import { useNewShortcut } from '../hooks/useGlobalShortcut';
 
 const getInitialCatalogData = (): Omit<Catalog, 'id'> => ({
@@ -49,9 +48,11 @@ const CatalogPage: React.FC = () => {
     const [catalogs, setCatalogs] = useState<Catalog[]>([]);
     const [filteredCatalogs, setFilteredCatalogs] = useState<Catalog[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [catalogSems, setCatalogSems] = useState<CatalogSem[]>([]);
-    const [sems, setSems] = useState<Sem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalRecords, setTotalRecords] = useState(0);
+    const itemsPerPage = 50;
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCatalog, setEditingCatalog] = useState<Catalog | null>(null);
     const [newCatalogData, setNewCatalogData] = useState<Omit<Catalog, 'id'>>(getInitialCatalogData());
@@ -74,48 +75,34 @@ const CatalogPage: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
 
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (page = currentPage) => {
         setLoading(true);
         try {
-            const [data, catalogSemsData, semData] = await Promise.all([
-                api.getCatalogs(),
-                api.getCatalogSems(),
-                api.getSems()
-            ]);
+            // API optimizada: obtiene catálogos con estadísticas en una sola query
+            const response = await api.getCatalogs(page, itemsPerPage);
 
-            // Calcular estadísticas dinámicamente para cada catálogo
-            const catalogsWithStats = await Promise.all(
-                data.map(async (catalog) => {
-                    const stats = await calculateCatalogStatistics(catalog.id);
-                    return {
-                        ...catalog,
-                        exvoto_count: stats.exvoto_count,
-                        related_places: stats.related_places
-                    };
-                })
-            );
-
-            // Ordenar por updated_at descendente (últimos modificados primero)
-            const sortedCatalogs = catalogsWithStats.sort((a, b) => {
-                const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-                const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-                return dateB - dateA;
-            });
-
-            setCatalogs(sortedCatalogs);
-            setCatalogSems(catalogSemsData);
-            setSems(semData);
+            setCatalogs(response.data);
+            setTotalPages(response.pagination.totalPages);
+            setTotalRecords(response.pagination.total);
+            setCurrentPage(response.pagination.page);
         } catch (error) {
-            console.error("Error fetching catalogs or SEMs:", error);
+            console.error("Error fetching catalogs:", error);
             showToast('Error al cargar los datos. Por favor, recarga la página.', 'error');
         } finally {
             setLoading(false);
         }
-    }, [showToast]);
+    }, [showToast, currentPage]);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        fetchData(currentPage);
+    }, [currentPage]);
+
+    // Función para cambiar de página
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+        }
+    };
 
     // Handle URL parameters for edit mode
     useEffect(() => {
@@ -430,6 +417,48 @@ const CatalogPage: React.FC = () => {
                 onDuplicateRow={handleDuplicate}
                 className="mt-4"
             />
+
+            {/* Controles de paginación */}
+            {!searchQuery && totalPages > 1 && (
+                <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-4">
+                    <div className="text-sm text-slate-600">
+                        Mostrando {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalRecords)} de {totalRecords} catálogos
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => handlePageChange(1)}
+                            disabled={currentPage === 1}
+                            className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            ««
+                        </button>
+                        <button
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            « Anterior
+                        </button>
+                        <span className="px-4 py-2 text-sm text-slate-700">
+                            Página {currentPage} de {totalPages}
+                        </span>
+                        <button
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Siguiente »
+                        </button>
+                        <button
+                            onClick={() => handlePageChange(totalPages)}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            »»
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Toast de feedback unificado */}
             {toast && (

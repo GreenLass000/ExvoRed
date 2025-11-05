@@ -54,6 +54,10 @@ const ExvotoPage: React.FC = () => {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [miracles, setMiracles] = useState<Miracle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const itemsPerPage = 100;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExvoto, setEditingExvoto] = useState<Exvoto | null>(null);
   const [newExvotoData, setNewExvotoData] = useState<Omit<Exvoto, 'id'>>(getInitialExvotoData());
@@ -98,24 +102,20 @@ const ExvotoPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (page: number) => {
     setLoading(true);
     try {
-      const [exvotoData, semData, characterData, miracleData] = await Promise.all([
-        api.getExvotos(),
-        api.getSems(),
+      const [exvotoResponse, semData, characterData, miracleData] = await Promise.all([
+        api.getExvotos(page, itemsPerPage),
+        api.getAllSems(),
         api.getCharacters(),
         api.getMiracles()
       ]);
 
-      // Ordenar por updated_at descendente (últimos modificados primero)
-      const sortedExvotos = [...exvotoData].sort((a, b) => {
-        const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-        const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-        return dateB - dateA;
-      });
-
-      setExvotos(sortedExvotos);
+      setExvotos(exvotoResponse.data);
+      setTotalPages(exvotoResponse.pagination.totalPages);
+      setTotalRecords(exvotoResponse.pagination.total);
+      setCurrentPage(exvotoResponse.pagination.page);
       setSems(semData);
       setCharacters(characterData);
       setMiracles(miracleData);
@@ -128,8 +128,15 @@ const ExvotoPage: React.FC = () => {
   }, [showToast]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchData(currentPage);
+  }, [currentPage, fetchData]);
+
+  // Función para cambiar de página
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
 
   // Handle URL parameters for edit mode
   useEffect(() => {
@@ -745,6 +752,48 @@ return (
         onDuplicateRow={handleDuplicate}
         className="mt-4"
       />
+
+      {/* Controles de paginación */}
+      {!searchQuery && totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-4">
+          <div className="text-sm text-slate-600">
+            Mostrando {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalRecords)} de {totalRecords} exvotos
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handlePageChange(1)}
+              disabled={currentPage === 1}
+              className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              ««
+            </button>
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              « Anterior
+            </button>
+            <span className="px-4 py-2 text-sm text-slate-700">
+              Página {currentPage} de {totalPages}
+            </span>
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Siguiente »
+            </button>
+            <button
+              onClick={() => handlePageChange(totalPages)}
+              disabled={currentPage === totalPages}
+              className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              »»
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Toast de feedback unificado */}
       {toast && (

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, desc, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { exvoto, exvotoImage, NewExvoto } from '../db/schema.js';
 
@@ -55,13 +55,34 @@ export const exvotoController = {
   // GET /api/exvotos - Obtener todos los exvotos
   async getAll(req: Request, res: Response) {
     try {
-      const rows = await db.select().from(exvoto);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 100;
+      const offset = (page - 1) * limit;
+
+      const rows = await db.select().from(exvoto)
+        .orderBy(desc(exvoto.updated_at))
+        .limit(limit)
+        .offset(offset);
+
       // Convertir imagen a data URL para el frontend
       const mapped = rows.map((r: any) => ({
         ...r,
         image: bufferToDataUrl(r.image)
       }));
-      res.json(mapped);
+
+      // Obtener el total de registros
+      const totalResult = await db.select({ count: sql<number>`COUNT(*)` }).from(exvoto);
+      const total = totalResult[0]?.count || 0;
+
+      res.json({
+        data: mapped,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
     } catch (error) {
       console.error('Error fetching exvotos:', error);
       res.status(500).json({ error: 'Failed to fetch exvotos' });

@@ -1,4 +1,4 @@
-import { sqliteTable, integer, text, blob, real } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, integer, text, blob } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 
 // Tabla miracle

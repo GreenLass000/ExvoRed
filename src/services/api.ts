@@ -20,8 +20,13 @@ async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
 }
 
 // --- SEM API ---
-export const getSems = (): Promise<Sem[]> => {
-    return apiCall<Sem[]>('/sems');
+export const getSems = (page = 1, limit = 100): Promise<PaginatedResponse<Sem>> => {
+    return apiCall<PaginatedResponse<Sem>>(`/sems?page=${page}&limit=${limit}`);
+};
+
+export const getAllSems = (): Promise<Sem[]> => {
+    // Función legacy para obtener todos los SEMs (para dropdowns)
+    return apiCall<PaginatedResponse<Sem>>('/sems?page=1&limit=10000').then(res => res.data);
 };
 
 export const getSemById = (id: number): Promise<Sem> => {
@@ -49,8 +54,23 @@ export const deleteSem = (id: number): Promise<{ message: string }> => {
 };
 
 // --- CATALOG API ---
-export const getCatalogs = (): Promise<Catalog[]> => {
-    return apiCall<Catalog[]>('/catalogs');
+export interface PaginatedResponse<T> {
+    data: T[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+}
+
+export const getCatalogs = (page = 1, limit = 50): Promise<PaginatedResponse<Catalog>> => {
+    return apiCall<PaginatedResponse<Catalog>>(`/catalogs?page=${page}&limit=${limit}`);
+};
+
+export const getAllCatalogs = (): Promise<Catalog[]> => {
+    // Función legacy para compatibilidad - obtiene todos los catálogos sin paginar
+    return apiCall<PaginatedResponse<Catalog>>('/catalogs?page=1&limit=10000').then(res => res.data);
 };
 
 export const getCatalogById = (id: number): Promise<Catalog> => {
@@ -78,8 +98,13 @@ export const deleteCatalog = (id: number): Promise<{ message: string }> => {
 };
 
 // --- EXVOTO API ---
-export const getExvotos = (): Promise<Exvoto[]> => {
-    return apiCall<Exvoto[]>('/exvotos');
+export const getExvotos = (page = 1, limit = 100): Promise<PaginatedResponse<Exvoto>> => {
+    return apiCall<PaginatedResponse<Exvoto>>(`/exvotos?page=${page}&limit=${limit}`);
+};
+
+export const getAllExvotos = (): Promise<Exvoto[]> => {
+    // Función legacy para compatibilidad
+    return apiCall<PaginatedResponse<Exvoto>>('/exvotos?page=1&limit=100000').then(res => res.data);
 };
 
 export const getExvotoById = (id: number): Promise<Exvoto> => {
@@ -177,8 +202,13 @@ export const deleteMiracle = (id: number): Promise<{ message: string }> => {
 
 // --- DIVINITY API ---
 import { Divinity } from '../types';
-export const getDivinities = (): Promise<Divinity[]> => {
-    return apiCall<Divinity[]>('/divinities');
+export const getDivinities = (page = 1, limit = 50): Promise<PaginatedResponse<Divinity>> => {
+    return apiCall<PaginatedResponse<Divinity>>(`/divinities?page=${page}&limit=${limit}`);
+};
+
+export const getAllDivinities = (): Promise<Divinity[]> => {
+    // Función legacy para compatibilidad
+    return apiCall<PaginatedResponse<Divinity>>('/divinities?page=1&limit=10000').then(res => res.data);
 };
 
 export const createDivinity = (payload: Partial<Divinity>): Promise<Divinity> => {
