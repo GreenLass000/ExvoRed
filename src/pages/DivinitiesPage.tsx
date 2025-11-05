@@ -38,7 +38,7 @@ const DivinitiesPage: React.FC = () => {
   const [editingDivinity, setEditingDivinity] = useState<Divinity | null>(null);
   const [newDivinityData, setNewDivinityData] = useState<Omit<Divinity, 'id'>>(getInitialDivinityData());
   const [hasUnsaved, setHasUnsaved] = useState(false);
-  const [duplicateToast, setDuplicateToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
   // Refs y estado para integración SearchBar-ExcelTable
   const excelTableRef = useRef<ExcelTableRef>(null);
@@ -46,6 +46,11 @@ const DivinitiesPage: React.FC = () => {
 
   // Atajo 'n' para crear nueva divinidad
   useNewShortcut({ isModalOpen, onNew: () => handleOpenModal() });
+
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -62,10 +67,11 @@ const DivinitiesPage: React.FC = () => {
       setDivinities(sortedDivinities);
     } catch (error) {
       console.error('Error fetching divinities:', error);
+      showToast('Error al cargar los datos. Por favor, recarga la página.', 'error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     fetchData();
@@ -119,25 +125,33 @@ const DivinitiesPage: React.FC = () => {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingDivinity) {
-      await api.updateDivinity(editingDivinity.id, newDivinityData);
-    } else {
-      await api.createDivinity(newDivinityData);
+    try {
+      if (editingDivinity) {
+        await api.updateDivinity(editingDivinity.id, newDivinityData);
+        showToast('Divinidad actualizada correctamente', 'success');
+      } else {
+        await api.createDivinity(newDivinityData);
+        showToast('Divinidad creada correctamente', 'success');
+      }
+      handleModalClose();
+      await fetchData();
+    } catch (error) {
+      console.error('Error saving divinity:', error);
+      showToast('Error al guardar la divinidad', 'error');
     }
-    handleModalClose();
-    await fetchData();
   };
 
   const handleUpdate = async (id: number, data: Partial<Divinity>) => {
-    const updatedDivinity = await api.updateDivinity(id, data);
-    if (updatedDivinity) {
-      setDivinities(prev => prev.map(d => d.id === id ? { ...d, ...updatedDivinity } : d));
+    try {
+      const updatedDivinity = await api.updateDivinity(id, data);
+      if (updatedDivinity) {
+        setDivinities(prev => prev.map(d => d.id === id ? { ...d, ...updatedDivinity } : d));
+        showToast('Cambios guardados correctamente', 'success');
+      }
+    } catch (error) {
+      console.error('Error updating divinity:', error);
+      showToast('Error al actualizar la divinidad', 'error');
     }
-  };
-
-  const handleDelete = async (id: number) => {
-    await api.deleteDivinity(id);
-    setDivinities(prev => prev.filter(d => d.id !== id));
   };
 
   const handleCreateEmpty = async () => {
@@ -157,8 +171,10 @@ const DivinitiesPage: React.FC = () => {
           return dateB - dateA;
         });
       });
+      showToast('Nueva fila vacía creada', 'success');
     } catch (error) {
       console.error("Error creating empty divinity:", error);
+      showToast('Error al crear fila vacía', 'error');
     }
   };
 
@@ -177,13 +193,10 @@ const DivinitiesPage: React.FC = () => {
         });
       });
 
-      // Mostrar feedback
-      setDuplicateToast('Divinidad duplicada correctamente');
-      setTimeout(() => setDuplicateToast(null), 3000);
+      showToast('Divinidad duplicada correctamente', 'success');
     } catch (error) {
       console.error("Error duplicating divinity:", error);
-      setDuplicateToast('Error al duplicar divinidad');
-      setTimeout(() => setDuplicateToast(null), 3000);
+      showToast('Error al duplicar divinidad', 'error');
     }
   };
 
@@ -193,7 +206,7 @@ const DivinitiesPage: React.FC = () => {
   ];
 
   // Handle de filtrado desde SearchBar
-  const handleFilteredDataChange = useCallback((filtered: Divinity[], matchingIndexes: number[], query: string) => {
+  const handleFilteredDataChange = useCallback((filtered: Divinity[], _matchingIndexes: number[], query: string) => {
     setFilteredDivinities(filtered);
     setSearchQuery(query);
   }, []);
@@ -241,7 +254,7 @@ const DivinitiesPage: React.FC = () => {
           onFilteredDataChange={handleFilteredDataChange}
           onSearchQuery={handleSearchQuery}
           onNavigateToResult={handleNavigateToResult}
-          excelTableRef={excelTableRef}
+          excelTableRef={excelTableRef as React.RefObject<{ selectCell: (rowIndex: number, columnKey: string) => void }>}
           searchResults={searchResults}
           placeholder="Buscar en divinidades (nombre, atributos, historia, representación, etc.)..."
           className="w-full"
@@ -326,26 +339,25 @@ const DivinitiesPage: React.FC = () => {
         columns={columns}
         searchQuery={searchQuery}
         pageId="divinities"
-        onEdit={(rowIndex, columnKey, data) => {
+        onEdit={(_rowIndex, _columnKey, data) => {
           handleEditDivinity(data.id);
         }}
-        onView={(rowIndex, columnKey, data) => {
+        onView={(_rowIndex, _columnKey, data) => {
           // Navegar a la página de detalles
           navigate(`/divinity/${data.id}`);
         }}
-        onViewNewTab={(rowIndex, columnKey, data) => {
+        onViewNewTab={(_rowIndex, _columnKey, data) => {
           // Abrir detalles en nueva pestaña
           window.open(`/divinity/${data.id}`, '_blank');
         }}
-        onInspect={(rowIndex, columnKey, data) => {
-          // Inspeccionar abre la página de detalles
+        onInspect={(_rowIndex, _columnKey, data) => {
           navigate(`/divinity/${data.id}`);
         }}
         onPrint={() => {
           window.print();
         }}
         onExport={() => {
-          console.log('Exportar Divinidades');
+          showToast('Exportación no implementada aún', 'warning');
         }}
         onNavigateSem={() => navigate('/sems')}
         onNavigateCatalog={() => navigate('/catalog')}
@@ -362,13 +374,29 @@ const DivinitiesPage: React.FC = () => {
         className="mt-4"
       />
 
-      {/* Toast de feedback para duplicación */}
-      {duplicateToast && (
-        <div className="fixed bottom-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-          {duplicateToast}
+      {/* Toast de feedback unificado */}
+      {toast && (
+        <div className={`fixed bottom-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in ${
+          toast.type === 'success' ? 'bg-green-500 text-white' :
+          toast.type === 'error' ? 'bg-red-500 text-white' :
+          'bg-yellow-500 text-white'
+        }`}>
+          {toast.type === 'success' && (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+          {toast.type === 'error' && (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          )}
+          {toast.type === 'warning' && (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          )}
+          {toast.message}
         </div>
       )}
     </div>

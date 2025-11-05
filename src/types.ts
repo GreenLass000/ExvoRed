@@ -27,6 +27,7 @@ export interface Catalog {
     publication_place: string | null;
     catalog_location: string | null;
     exvoto_count: number | null;
+    related_places?: string | null; // Calculated field: related SEM places
     location_description: string | null;
     oldest_exvoto_date: string | null;
     newest_exvoto_date: string | null;

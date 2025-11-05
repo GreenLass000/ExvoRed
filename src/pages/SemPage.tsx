@@ -55,11 +55,17 @@ const SemPage: React.FC = () => {
   const [editingSem, setEditingSem] = useState<Sem | null>(null);
   const [newSemData, setNewSemData] = useState<Omit<Sem, 'id'>>(getInitialSemData());
   const [hasUnsaved, setHasUnsaved] = useState(false);
-  const [duplicateToast, setDuplicateToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
   // Refs y estado para integración SearchBar-ExcelTable
   const excelTableRef = useRef<ExcelTableRef>(null);
   const [searchResults, setSearchResults] = useState<Array<{ rowIndex: number; columnKey: string; content: string }>>([]);
+
+  // Función helper para mostrar mensajes toast
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  }, []);
 
   // Atajo 'n' para crear nuevo SEM
   useNewShortcut({ isModalOpen, onNew: () => handleOpenModal() });
@@ -82,10 +88,11 @@ const SemPage: React.FC = () => {
       setSems(sortedSems);
     } catch (error) {
       console.error("Error fetching sems:", error);
+      showToast('Error al cargar los datos. Por favor, recarga la página.', 'error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     fetchData();
@@ -141,29 +148,33 @@ const SemPage: React.FC = () => {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingSem) {
-      await api.updateSem(editingSem.id, newSemData);
-    } else {
-      await api.createSem(newSemData);
+    try {
+      if (editingSem) {
+        await api.updateSem(editingSem.id, newSemData);
+        showToast('SEM actualizado correctamente', 'success');
+      } else {
+        await api.createSem(newSemData);
+        showToast('SEM creado correctamente', 'success');
+      }
+      handleModalClose();
+      await fetchData();
+    } catch (error) {
+      console.error('Error al guardar SEM:', error);
+      showToast(editingSem ? 'Error al actualizar el SEM' : 'Error al crear el SEM', 'error');
     }
-    handleModalClose();
-    await fetchData();
   };
 
   const handleUpdate = async (id: number, data: Partial<Sem>) => {
-    const updatedSem = await api.updateSem(id, data);
-    if (updatedSem) {
-      setSems(prev => prev.map(s => s.id === id ? { ...s, ...updatedSem } : s));
+    try {
+      const updatedSem = await api.updateSem(id, data);
+      if (updatedSem) {
+        setSems(prev => prev.map(s => s.id === id ? { ...s, ...updatedSem } : s));
+        showToast('SEM actualizado correctamente', 'success');
+      }
+    } catch (error) {
+      console.error("Error updating sem:", error);
+      showToast('Error al actualizar el SEM', 'error');
     }
-  };
-
-  const handleDelete = async (id: number) => {
-    await api.deleteSem(id);
-    setSems(prev => prev.filter(s => s.id !== id));
-  };
-
-  const handleViewDetail = (id: number) => {
-    navigate(`/sem/${id}`);
   };
 
   const handleCreateEmpty = async () => {
@@ -172,8 +183,10 @@ const SemPage: React.FC = () => {
       const created = await api.createSem(emptySem);
       setSems(prev => [...prev, created]);
       await fetchData();
+      showToast('Fila vacía creada correctamente', 'success');
     } catch (error) {
       console.error("Error creating empty sem:", error);
+      showToast('Error al crear fila vacía', 'error');
     }
   };
 
@@ -192,13 +205,10 @@ const SemPage: React.FC = () => {
         });
       });
 
-      // Mostrar feedback
-      setDuplicateToast('SEM duplicado correctamente');
-      setTimeout(() => setDuplicateToast(null), 3000);
+      showToast('SEM duplicado correctamente', 'success');
     } catch (error) {
       console.error("Error duplicating sem:", error);
-      setDuplicateToast('Error al duplicar SEM');
-      setTimeout(() => setDuplicateToast(null), 3000);
+      showToast('Error al duplicar SEM', 'error');
     }
   };
 
@@ -209,7 +219,7 @@ const SemPage: React.FC = () => {
   ];
 
   // Handle de filtrado desde SearchBar
-  const handleFilteredDataChange = useCallback((filtered: Sem[], matchingIndexes: number[], query: string) => {
+  const handleFilteredDataChange = useCallback((filtered: Sem[], _matchingIndexes: number[], query: string) => {
     setFilteredSems(filtered);
     setSearchQuery(query);
   }, []);
@@ -292,7 +302,7 @@ const SemPage: React.FC = () => {
           onFilteredDataChange={handleFilteredDataChange}
           onSearchQuery={handleSearchQuery}
           onNavigateToResult={handleNavigateToResult}
-          excelTableRef={excelTableRef}
+          excelTableRef={excelTableRef as React.RefObject<{ selectCell: (rowIndex: number, columnKey: string) => void }>}
           searchResults={searchResults}
           placeholder="Buscar en SEMs (nombre, región, provincia, población, etc.)..."
           className="w-full"
@@ -335,23 +345,24 @@ const SemPage: React.FC = () => {
         columns={columns}
         searchQuery={searchQuery}
         pageId="sems"
-        onEdit={(rowIndex, columnKey, data) => {
+        onEdit={(_rowIndex, _columnKey, data) => {
           handleEditSem(data.id);
         }}
-        onView={(rowIndex, columnKey, data) => {
+        onView={(_rowIndex, _columnKey, data) => {
           navigate(`/sem/${data.id}`);
         }}
-        onViewNewTab={(rowIndex, columnKey, data) => {
+        onViewNewTab={(_rowIndex, _columnKey, data) => {
           window.open(`/sem/${data.id}`, '_blank');
         }}
-        onInspect={(rowIndex, columnKey, data) => {
-          console.log('Inspeccionar SEM:', data);
+        onInspect={(_rowIndex, _columnKey, data) => {
+          // Navegar a detalle en vez de hacer console.log
+          navigate(`/sem/${data.id}`);
         }}
         onPrint={() => {
           window.print();
         }}
         onExport={() => {
-          console.log('Exportar SEMs');
+          showToast('Exportación no implementada aún', 'warning');
         }}
         onNavigateSem={() => navigate('/sems')}
         onNavigateCatalog={() => navigate('/catalog')}
@@ -368,13 +379,29 @@ const SemPage: React.FC = () => {
         className="mt-4"
       />
 
-      {/* Toast de feedback para duplicación */}
-      {duplicateToast && (
-        <div className="fixed bottom-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-          {duplicateToast}
+      {/* Toast de feedback unificado */}
+      {toast && (
+        <div className={`fixed bottom-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in ${
+          toast.type === 'success' ? 'bg-green-500 text-white' :
+          toast.type === 'error' ? 'bg-red-500 text-white' :
+          'bg-yellow-500 text-white'
+        }`}>
+          {toast.type === 'success' && (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+          {toast.type === 'error' && (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          )}
+          {toast.type === 'warning' && (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          )}
+          {toast.message}
         </div>
       )}
     </div>

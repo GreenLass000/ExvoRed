@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
-import SearchBar from '../components/SearchBar';
 import { PlusIcon, MagnifyingGlassIcon } from '../components/icons';
 import * as api from '../services/api';
 import { Character } from '../types';

@@ -59,7 +59,7 @@ const ExvotoPage: React.FC = () => {
   const [newExvotoData, setNewExvotoData] = useState<Omit<Exvoto, 'id'>>(getInitialExvotoData());
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [hasUnsaved, setHasUnsaved] = useState(false);
-  const [duplicateToast, setDuplicateToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
   // Modal rápido para crear SEM desde el formulario de Exvoto
   const [isSemModalOpen, setIsSemModalOpen] = useState(false);
@@ -81,6 +81,12 @@ const ExvotoPage: React.FC = () => {
     contact: ''
   });
   const [newSemQuick, setNewSemQuick] = useState<Omit<Sem, 'id'>>(getInitialQuickSem());
+
+  // Función helper para mostrar mensajes toast
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  }, []);
 
   // Atajo 'n' para crear nuevo exvoto
   useNewShortcut({ isModalOpen, onNew: () => handleOpenModal() });
@@ -115,10 +121,11 @@ const ExvotoPage: React.FC = () => {
       setMiracles(miracleData);
     } catch (error) {
       console.error("Error fetching data:", error);
+      showToast('Error al cargar los datos. Por favor, recarga la página.', 'error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     fetchData();
@@ -210,18 +217,17 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
   ], [getSemDisplayValue, navigate, sems]);
 
   const handleUpdate = async (id: number, data: Partial<Exvoto>) => {
-    const updatedExvoto = await api.updateExvoto(id, data);
-    if (updatedExvoto) {
-      setExvotos(prev => prev.map(e => e.id === id ? { ...e, ...updatedExvoto } : e));
+    try {
+      const updatedExvoto = await api.updateExvoto(id, data);
+      if (updatedExvoto) {
+        setExvotos(prev => prev.map(e => e.id === id ? { ...e, ...updatedExvoto } : e));
+        showToast('Exvoto actualizado correctamente', 'success');
+      }
+    } catch (error) {
+      console.error("Error updating exvoto:", error);
+      showToast('Error al actualizar el exvoto', 'error');
     }
   };
-
-  const handleDelete = async (id: number) => {
-    await api.deleteExvoto(id);
-    setExvotos(prev => prev.filter(e => e.id !== id));
-  };
-
-  const handleView = (id: number) => navigate(`/exvoto/${id}`);
 
   const handleCreateEmpty = async () => {
     try {
@@ -230,8 +236,10 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
       setExvotos(prev => [...prev, created]);
       // Refrescar datos para asegurar consistencia
       await fetchData();
+      showToast('Fila vacía creada correctamente', 'success');
     } catch (error) {
       console.error("Error creating empty exvoto:", error);
+      showToast('Error al crear fila vacía', 'error');
     }
   };
 
@@ -251,13 +259,10 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
         });
       });
 
-      // Mostrar feedback
-      setDuplicateToast('Exvoto duplicado correctamente');
-      setTimeout(() => setDuplicateToast(null), 3000);
+      showToast('Exvoto duplicado correctamente', 'success');
     } catch (error) {
       console.error("Error duplicating exvoto:", error);
-      setDuplicateToast('Error al duplicar exvoto');
-      setTimeout(() => setDuplicateToast(null), 3000);
+      showToast('Error al duplicar exvoto', 'error');
     }
   };
 
@@ -302,23 +307,42 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingExvoto) {
-      const updated = await api.updateExvoto(editingExvoto.id, newExvotoData);
-      // Subir imágenes adicionales seleccionadas (si hay más de una)
-      const extra = selectedImages.slice(1);
-      if (extra.length > 0) {
-        try { await api.addExvotoImages(updated.id, extra); } catch (err) { console.error('Error subiendo imágenes extra:', err); }
+    try {
+      if (editingExvoto) {
+        const updated = await api.updateExvoto(editingExvoto.id, newExvotoData);
+        // Subir imágenes adicionales seleccionadas (si hay más de una)
+        const extra = selectedImages.slice(1);
+        if (extra.length > 0) {
+          try {
+            await api.addExvotoImages(updated.id, extra);
+          } catch (err) {
+            console.error('Error subiendo imágenes extra:', err);
+            showToast('Exvoto actualizado, pero algunas imágenes no se pudieron subir', 'warning');
+          }
+        } else {
+          showToast('Exvoto actualizado correctamente', 'success');
+        }
+      } else {
+        const created = await api.createExvoto(newExvotoData);
+        const extra = selectedImages.slice(1);
+        if (extra.length > 0) {
+          try {
+            await api.addExvotoImages(created.id, extra);
+          } catch (err) {
+            console.error('Error subiendo imágenes extra:', err);
+            showToast('Exvoto creado, pero algunas imágenes no se pudieron subir', 'warning');
+          }
+        } else {
+          showToast('Exvoto creado correctamente', 'success');
+        }
       }
-    } else {
-      const created = await api.createExvoto(newExvotoData);
-      const extra = selectedImages.slice(1);
-      if (extra.length > 0) {
-        try { await api.addExvotoImages(created.id, extra); } catch (err) { console.error('Error subiendo imágenes extra:', err); }
-      }
+      handleModalClose();
+      setSelectedImages([]);
+      await fetchData();
+    } catch (error) {
+      console.error('Error al guardar exvoto:', error);
+      showToast(editingExvoto ? 'Error al actualizar el exvoto' : 'Error al crear el exvoto', 'error');
     }
-    handleModalClose();
-    setSelectedImages([]);
-    await fetchData();
   };
 
   // Campos para la búsqueda
@@ -332,7 +356,7 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
   ];
 
   // Handle de filtrado desde SearchBar
-  const handleFilteredDataChange = useCallback((filtered: Exvoto[], matchingIndexes: number[], query: string) => {
+  const handleFilteredDataChange = useCallback((filtered: Exvoto[], _matchingIndexes: number[], query: string) => {
     setFilteredExvotos(filtered);
     setSearchQuery(query);
   }, []);
@@ -461,7 +485,7 @@ return (
           onFilteredDataChange={handleFilteredDataChange}
           onSearchQuery={handleSearchQuery}
           onNavigateToResult={handleNavigateToResult}
-          excelTableRef={excelTableRef}
+          excelTableRef={excelTableRef as React.RefObject<{ selectCell: (rowIndex: number, columnKey: string) => void }>}
           searchResults={searchResults}
           placeholder="Buscar en exvotos (ID, provincia, beneficiado, oferente, milagro, etc.)..."
           className="w-full"
@@ -539,9 +563,11 @@ return (
                       .then((urls) => {
                         setSelectedImages(urls);
                         setNewExvotoData((prev) => ({ ...prev, image: urls[0] || null })); // primera como portada
+                        setHasUnsaved(true);
                       })
                       .catch((err) => {
                         console.error('Error leyendo imágenes:', err);
+                        showToast('Error al leer las imágenes seleccionadas', 'error');
                       });
                   }}
                   className="block text-sm text-slate-700"
@@ -584,15 +610,20 @@ return (
           onSubmit={async (e) => {
             e.preventDefault();
             try {
-              if (!newSemQuick.name || newSemQuick.name.trim() === '') return;
+              if (!newSemQuick.name || newSemQuick.name.trim() === '') {
+                showToast('El nombre del SEM es obligatorio', 'warning');
+                return;
+              }
               const created = await api.createSem(newSemQuick);
               setSems(prev => [...prev, created]);
               if (semFieldTarget) {
                 setNewExvotoData(prev => ({ ...prev, [semFieldTarget]: created.id }));
               }
               setIsSemModalOpen(false);
+              showToast('SEM creado correctamente', 'success');
             } catch (err) {
               console.error('Error al crear SEM rápido:', err);
+              showToast('Error al crear el SEM', 'error');
             }
           }}
         >
@@ -667,23 +698,24 @@ return (
         columns={columns}
         searchQuery={searchQuery}
         pageId="exvotos"
-        onEdit={(rowIndex, columnKey, data) => {
+        onEdit={(_rowIndex, _columnKey, data) => {
           handleEditExvoto(data.id);
         }}
-        onView={(rowIndex, columnKey, data) => {
+        onView={(_rowIndex, _columnKey, data) => {
           navigate(`/exvoto/${data.id}`);
         }}
-        onViewNewTab={(rowIndex, columnKey, data) => {
+        onViewNewTab={(_rowIndex, _columnKey, data) => {
           window.open(`/exvoto/${data.id}`, '_blank');
         }}
-        onInspect={(rowIndex, columnKey, data) => {
-          console.log('Inspeccionar:', data);
+        onInspect={(_rowIndex, _columnKey, data) => {
+          // Navegar a detalle en vez de hacer console.log
+          navigate(`/exvoto/${data.id}`);
         }}
         onPrint={() => {
           window.print();
         }}
         onExport={() => {
-          console.log('Exportar datos');
+          showToast('Exportación no implementada aún', 'warning');
         }}
         onNavigateSem={() => navigate('/sems')}
         onNavigateCatalog={() => navigate('/catalog')}
@@ -714,13 +746,29 @@ return (
         className="mt-4"
       />
 
-      {/* Toast de feedback para duplicación */}
-      {duplicateToast && (
-        <div className="fixed bottom-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-          {duplicateToast}
+      {/* Toast de feedback unificado */}
+      {toast && (
+        <div className={`fixed bottom-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in ${
+          toast.type === 'success' ? 'bg-green-500 text-white' :
+          toast.type === 'error' ? 'bg-red-500 text-white' :
+          'bg-yellow-500 text-white'
+        }`}>
+          {toast.type === 'success' && (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+          {toast.type === 'error' && (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          )}
+          {toast.type === 'warning' && (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          )}
+          {toast.message}
         </div>
       )}
     </div>

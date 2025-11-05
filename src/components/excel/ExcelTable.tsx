@@ -281,6 +281,15 @@ const ExcelTableInner = <T extends Record<string, any>>({
       return;
     }
 
+    const columnDef = columns.find(col => String(col.key) === columnKey);
+
+    // Don't allow pasting into id column or readOnly columns
+    if (columnKey === 'id' || columnDef?.readOnly) {
+      setStatus({ rowIndex, message: 'Columna de solo lectura', type: 'error' });
+      setTimeout(() => setStatus(null), 2000);
+      return;
+    }
+
     const rowId = rowData[idField];
 
     // Show paste status immediately
@@ -297,7 +306,7 @@ const ExcelTableInner = <T extends Record<string, any>>({
       setStatus({ rowIndex, message: 'Error al pegar', type: 'error' });
       setTimeout(() => setStatus(null), 2000);
     }
-  }, [copiedValue, onRowUpdate, excelState.filteredData, idField]);
+  }, [copiedValue, onRowUpdate, excelState.filteredData, idField, columns]);
 
   // Keyboard navigation
   useExcelKeyboard(excelState, excelActions, {
@@ -334,7 +343,9 @@ const ExcelTableInner = <T extends Record<string, any>>({
     // Enter -> inline editing when available
     onStartInlineEdit: onRowUpdate ? (rowIndex, columnKey) => {
       const rowData = excelState.filteredData[rowIndex];
-      if (rowData && columnKey !== 'id') {
+      const columnDef = columns.find(col => String(col.key) === columnKey);
+      // Don't allow editing id column or readOnly columns
+      if (rowData && columnKey !== 'id' && !columnDef?.readOnly) {
         setEditingInlineCell({ rowIndex, columnKey });
         setEditValue(rowData[columnKey] ?? '');
       }
@@ -421,8 +432,10 @@ const ExcelTableInner = <T extends Record<string, any>>({
       const rowData = excelState.filteredData[rowIndex];
       if (!rowData) return;
 
-      // If onRowUpdate is available and not the id column, enable inline editing
-      if (onRowUpdate && columnKey !== 'id') {
+      const columnDef = columns.find(col => String(col.key) === columnKey);
+
+      // If onRowUpdate is available and not the id column or readOnly column, enable inline editing
+      if (onRowUpdate && columnKey !== 'id' && !columnDef?.readOnly) {
         setEditingInlineCell({ rowIndex, columnKey });
         setEditValue(rowData[columnKey] ?? '');
       }
@@ -432,7 +445,7 @@ const ExcelTableInner = <T extends Record<string, any>>({
         excelActions.expandCell(content, rowIndex, columnKey);
       }
     }
-  }, [excelActions, excelState.filteredData, onRowUpdate]);
+  }, [excelActions, excelState.filteredData, onRowUpdate, columns]);
 
   // Get cell customization
   const getCellStyle = useCallback((rowId: string | number, columnKey: string) => {

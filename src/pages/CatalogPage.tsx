@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ColumnDef } from '../components/DataTable';
 import { ExcelTable, ExcelTableRef } from '../components/excel';
@@ -35,7 +35,8 @@ const columns: ColumnDef<Catalog>[] = [
     { key: 'publication_year', header: 'Año Publicación', type: 'number' },
     { key: 'publication_place', header: 'Lugar Publicación' },
     { key: 'catalog_location', header: 'Ubicación del Catálogo' },
-    { key: 'exvoto_count', header: 'Nº Exvotos', type: 'number' },
+    { key: 'exvoto_count', header: 'Nº Exvotos', type: 'number', readOnly: true },
+    { key: 'related_places', header: 'Lugares Relacionados', readOnly: true },
     { key: 'location_description', header: 'Descripción Ubicación', type: 'truncated' },
     { key: 'oldest_exvoto_date', header: 'Fecha Más Antigua', type: 'date' },
     { key: 'newest_exvoto_date', header: 'Fecha Más Reciente', type: 'date' },
@@ -55,23 +56,23 @@ const CatalogPage: React.FC = () => {
     const [editingCatalog, setEditingCatalog] = useState<Catalog | null>(null);
     const [newCatalogData, setNewCatalogData] = useState<Omit<Catalog, 'id'>>(getInitialCatalogData());
     const [hasUnsaved, setHasUnsaved] = useState(false);
-    const [duplicateToast, setDuplicateToast] = useState<string | null>(null);
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
     // Refs y estado para integración SearchBar-ExcelTable
     const excelTableRef = useRef<ExcelTableRef>(null);
     const [searchResults, setSearchResults] = useState<Array<{ rowIndex: number; columnKey: string; content: string }>>([]);
+
+    // Función helper para mostrar mensajes toast
+    const showToast = useCallback((message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 4000);
+    }, []);
 
     // Atajo 'n' para crear nuevo catálogo
     useNewShortcut({ isModalOpen, onNew: () => handleOpenModal() });
 
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-
-    const getProvincesByCatalogId = useCallback((catalogId: number) => {
-        const semIds = catalogSems.filter(cs => cs.catalog_id === catalogId).map(cs => cs.sem_id);
-        const provinces = sems.filter(sem => semIds.includes(sem.id)).map(sem => sem.province ?? '').filter(Boolean);
-        return provinces.length > 0 ? provinces.join(', ') : "No disponible";
-    }, [catalogSems, sems]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -106,10 +107,11 @@ const CatalogPage: React.FC = () => {
             setSems(semData);
         } catch (error) {
             console.error("Error fetching catalogs or SEMs:", error);
+            showToast('Error al cargar los datos. Por favor, recarga la página.', 'error');
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [showToast]);
 
     useEffect(() => {
         fetchData();
@@ -202,29 +204,33 @@ const CatalogPage: React.FC = () => {
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (editingCatalog) {
-            await api.updateCatalog(editingCatalog.id, newCatalogData);
-        } else {
-            await api.createCatalog(newCatalogData);
+        try {
+            if (editingCatalog) {
+                await api.updateCatalog(editingCatalog.id, newCatalogData);
+                showToast('Catálogo actualizado correctamente', 'success');
+            } else {
+                await api.createCatalog(newCatalogData);
+                showToast('Catálogo creado correctamente', 'success');
+            }
+            handleModalClose();
+            await fetchData();
+        } catch (error) {
+            console.error('Error al guardar catálogo:', error);
+            showToast(editingCatalog ? 'Error al actualizar el catálogo' : 'Error al crear el catálogo', 'error');
         }
-        handleModalClose();
-        await fetchData();
     };
 
     const handleUpdate = async (id: number, data: Partial<Catalog>) => {
-        const updatedCatalog = await api.updateCatalog(id, data);
-        if (updatedCatalog) {
-            setCatalogs(prev => prev.map(c => c.id === id ? { ...c, ...updatedCatalog } : c));
+        try {
+            const updatedCatalog = await api.updateCatalog(id, data);
+            if (updatedCatalog) {
+                setCatalogs(prev => prev.map(c => c.id === id ? { ...c, ...updatedCatalog } : c));
+                showToast('Catálogo actualizado correctamente', 'success');
+            }
+        } catch (error) {
+            console.error("Error updating catalog:", error);
+            showToast('Error al actualizar el catálogo', 'error');
         }
-    };
-    
-    const handleDelete = async (id: number) => {
-        await api.deleteCatalog(id);
-        setCatalogs(prev => prev.filter(c => c.id !== id));
-    };
-
-    const handleViewDetail = (id: number) => {
-        navigate(`/catalog/${id}`);
     };
 
     const handleCreateEmpty = async () => {
@@ -233,8 +239,10 @@ const CatalogPage: React.FC = () => {
             const created = await api.createCatalog(emptyCatalog);
             setCatalogs(prev => [...prev, created]);
             await fetchData();
+            showToast('Fila vacía creada correctamente', 'success');
         } catch (error) {
             console.error("Error creating empty catalog:", error);
+            showToast('Error al crear fila vacía', 'error');
         }
     };
 
@@ -253,13 +261,10 @@ const CatalogPage: React.FC = () => {
                 });
             });
 
-            // Mostrar feedback
-            setDuplicateToast('Catálogo duplicado correctamente');
-            setTimeout(() => setDuplicateToast(null), 3000);
+            showToast('Catálogo duplicado correctamente', 'success');
         } catch (error) {
             console.error("Error duplicating catalog:", error);
-            setDuplicateToast('Error al duplicar catálogo');
-            setTimeout(() => setDuplicateToast(null), 3000);
+            showToast('Error al duplicar catálogo', 'error');
         }
     };
 
@@ -270,7 +275,7 @@ const CatalogPage: React.FC = () => {
     ];
 
     // Handle de filtrado desde SearchBar
-    const handleFilteredDataChange = useCallback((filtered: Catalog[], matchingIndexes: number[], query: string) => {
+    const handleFilteredDataChange = useCallback((filtered: Catalog[], _matchingIndexes: number[], query: string) => {
         setFilteredCatalogs(filtered);
         setSearchQuery(query);
     }, []);
@@ -350,7 +355,7 @@ const CatalogPage: React.FC = () => {
                     onFilteredDataChange={handleFilteredDataChange}
                     onSearchQuery={handleSearchQuery}
                     onNavigateToResult={handleNavigateToResult}
-                    excelTableRef={excelTableRef}
+                    excelTableRef={excelTableRef as React.RefObject<{ selectCell: (rowIndex: number, columnKey: string) => void }>}
                     searchResults={searchResults}
                     placeholder="Buscar en catálogos (título, referencia, autor, ubicación, etc.)..."
                     className="w-full"
@@ -366,7 +371,6 @@ const CatalogPage: React.FC = () => {
                         {renderFormField('Año de Publicación', 'publication_year', 'number')}
                         {renderFormField('Lugar de Publicación', 'publication_place')}
                         {renderFormField('Ubicación del Catálogo', 'catalog_location')}
-                        {renderFormField('Número de Exvotos', 'exvoto_count', 'number')}
                         {renderFormField('Fecha Más Antigua (YYYY-MM-DD o X)', 'oldest_exvoto_date', 'text')}
                         {renderFormField('Fecha Más Reciente (YYYY-MM-DD o X)', 'newest_exvoto_date', 'text')}
                         {renderFormField('Número Total Exvotos', 'numero_exvotos', 'number')}
@@ -390,34 +394,27 @@ const CatalogPage: React.FC = () => {
             <ExcelTable<Catalog>
                 ref={excelTableRef}
                 data={filteredCatalogs.length > 0 || searchQuery ? filteredCatalogs : catalogs}
-                columns={columns.map(col => {
-                    if (col.key === 'provinces') {
-                        return {
-                            ...col,
-                            getDisplayValue: (row: Catalog) => getProvincesByCatalogId(row.id)
-                        };
-                    }
-                    return col;
-                })}
+                columns={columns}
                 searchQuery={searchQuery}
                 pageId="catalogs"
-                onEdit={(rowIndex, columnKey, data) => {
+                onEdit={(_rowIndex, _columnKey, data) => {
                   handleEditCatalog(data.id);
                 }}
-                onView={(rowIndex, columnKey, data) => {
+                onView={(_rowIndex, _columnKey, data) => {
                   navigate(`/catalog/${data.id}`);
                 }}
-                onViewNewTab={(rowIndex, columnKey, data) => {
+                onViewNewTab={(_rowIndex, _columnKey, data) => {
                   window.open(`/catalog/${data.id}`, '_blank');
                 }}
-                onInspect={(rowIndex, columnKey, data) => {
-                  console.log('Inspeccionar Catálogo:', data);
+                onInspect={(_rowIndex, _columnKey, data) => {
+                  // Navegar a detalle en vez de hacer console.log
+                  navigate(`/catalog/${data.id}`);
                 }}
                 onPrint={() => {
                   window.print();
                 }}
                 onExport={() => {
-                  console.log('Exportar Catálogos');
+                  showToast('Exportación no implementada aún', 'warning');
                 }}
                 onNavigateSem={() => navigate('/sems')}
                 onNavigateCatalog={() => navigate('/catalog')}
@@ -434,13 +431,29 @@ const CatalogPage: React.FC = () => {
                 className="mt-4"
             />
 
-            {/* Toast de feedback para duplicación */}
-            {duplicateToast && (
-                <div className="fixed bottom-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    {duplicateToast}
+            {/* Toast de feedback unificado */}
+            {toast && (
+                <div className={`fixed bottom-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in ${
+                    toast.type === 'success' ? 'bg-green-500 text-white' :
+                    toast.type === 'error' ? 'bg-red-500 text-white' :
+                    'bg-yellow-500 text-white'
+                }`}>
+                    {toast.type === 'success' && (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                    )}
+                    {toast.type === 'error' && (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    )}
+                    {toast.type === 'warning' && (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    )}
+                    {toast.message}
                 </div>
             )}
         </div>

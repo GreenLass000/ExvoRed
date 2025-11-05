@@ -12,6 +12,7 @@ export type ColumnDef<T> = {
     getDisplayValue?: (row: T) => React.ReactNode;
     onCellClick?: (row: T) => void;
     render?: (value: any, row: T) => React.ReactNode; // renderizador personalizado (p. ej., miniaturas)
+    readOnly?: boolean; // Marca la columna como solo lectura (no editable)
 };
 
 interface DataTableProps<T extends { id: number }> {

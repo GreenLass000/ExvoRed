@@ -146,12 +146,20 @@ const CatalogDetailPage: React.FC = () => {
         <div className="max-w-4xl mx-auto">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-slate-700">Detalles del Catálogo</h1>
-                <button
-                    onClick={() => navigate('/catalog')}
-                    className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
-                >
-                    ← Volver a Catálogos
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={handleEditCatalog}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                        Editar
+                    </button>
+                    <button
+                        onClick={() => navigate('/catalog')}
+                        className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
+                    >
+                        ← Volver a Catálogos
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white rounded-lg shadow-lg p-6">
