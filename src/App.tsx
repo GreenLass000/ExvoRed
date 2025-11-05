@@ -17,7 +17,7 @@ const KeybindsPage = lazy(() => import('./pages/KeybindsPage'));
 
 const App: React.FC = () => {
     return (
-        <Router>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Layout>
                 <ErrorBoundary>
                     <Suspense fallback={<div className="p-8 text-center">Cargando página...</div>}>
