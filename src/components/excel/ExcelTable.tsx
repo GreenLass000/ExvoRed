@@ -510,6 +510,53 @@ const ExcelTableInner = <T extends Record<string, any>>({
       contentToRender = String(value);
     }
 
+    // Helper function to detect if content is HTML
+    const isHTML = (str: string) => {
+      return /<[^>]+>/.test(str);
+    };
+
+    // Helper function to strip HTML tags for plain text display
+    const stripHTML = (html: string) => {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      return tmp.textContent || tmp.innerText || '';
+    };
+
+    // Handle richtext type - always render HTML
+    if (column?.type === 'richtext' && typeof contentToRender === 'string') {
+      if (isHTML(contentToRender)) {
+        return (
+          <div
+            className="prose prose-sm max-w-none [&>*]:my-0 [&>*]:leading-tight [&>p]:my-0"
+            dangerouslySetInnerHTML={{ __html: contentToRender }}
+          />
+        );
+      }
+      // If richtext but no HTML, show as plain text
+      return contentToRender;
+    }
+
+    // Handle truncated type - show plain text truncated
+    if (column?.type === 'truncated' && typeof contentToRender === 'string') {
+      const plainText = isHTML(contentToRender) ? stripHTML(contentToRender) : contentToRender;
+      const truncatedText = plainText.length > 50 ? plainText.substring(0, 50) + '...' : plainText;
+      return (
+        <span title={plainText}>
+          {searchQuery ? highlightText(truncatedText, searchQuery) : truncatedText}
+        </span>
+      );
+    }
+
+    // If content is a string and contains HTML (for non-specified type columns), render it as HTML
+    if (typeof contentToRender === 'string' && isHTML(contentToRender)) {
+      return (
+        <div
+          className="prose prose-sm max-w-none [&>*]:my-0 [&>*]:leading-tight"
+          dangerouslySetInnerHTML={{ __html: contentToRender }}
+        />
+      );
+    }
+
     // Apply highlighting if search query is active and content is a string
     if (searchQuery && typeof contentToRender === 'string') {
       return highlightText(contentToRender, searchQuery);

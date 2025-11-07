@@ -21,10 +21,10 @@ const getInitialDivinityData = (): Omit<Divinity, 'id'> => ({
 
 const columns: ColumnDef<Divinity>[] = [
   { key: 'name', header: 'Nombre' },
-  { key: 'attributes', header: 'Atributos/Especialidad', type: 'truncated' },
-  { key: 'history', header: 'Historia', type: 'truncated' },
-  { key: 'representation', header: 'Representación', type: 'truncated' },
-  { key: 'comments', header: 'Comentarios', type: 'truncated' }
+  { key: 'attributes', header: 'Atributos/Especialidad', type: 'richtext' },
+  { key: 'history', header: 'Historia', type: 'richtext' },
+  { key: 'representation', header: 'Representación', type: 'richtext' },
+  { key: 'comments', header: 'Comentarios', type: 'richtext' }
 ];
 
 const DivinitiesPage: React.FC = () => {

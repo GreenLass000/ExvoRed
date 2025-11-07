@@ -220,13 +220,13 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
     { key: 'material', header: 'Soporte Material' },
     { key: 'dimensions', header: 'Dimensiones' },
     { key: 'text_case', header: 'Uso Capitales' },
-    { key: 'text_form', header: 'Competencia Gráfica' },
-    { key: 'writing_type', header: 'Tipo de Escritura', type: 'truncated' },
-    { key: 'linguistic_competence', header: 'Competencia Lingüística', type: 'truncated' },
-    { key: 'references', header: 'Referencias', type: 'truncated' },
+    { key: 'text_form', header: 'Competencia Gráfica', type: 'richtext' },
+    { key: 'writing_type', header: 'Tipo de Escritura', type: 'richtext' },
+    { key: 'linguistic_competence', header: 'Competencia Lingüística', type: 'richtext' },
+    { key: 'references', header: 'Referencias', type: 'richtext' },
     { key: 'conservation_status', header: 'Estado Conservación' },
-    { key: 'extra_info', header: 'Info Extra', type: 'truncated' },
-    { key: 'transcription', header: 'Transcripción', type: 'truncated' }
+    { key: 'extra_info', header: 'Info Extra', type: 'richtext' },
+    { key: 'transcription', header: 'Transcripción', type: 'richtext' }
   ], [getSemDisplayValue, navigate, sems]);
 
   const handleUpdate = async (id: number, data: Partial<Exvoto>) => {
@@ -541,7 +541,7 @@ return (
             {renderFormField('Soporte Material', 'material')}
             {renderFormField('Dimensiones', 'dimensions')}
             {renderFormField('Uso Capitales', 'text_case')}
-            {renderFormField('Competencia Gráfica', 'text_form')}
+            <div className="md:col-span-2 lg:col-span-3">{renderFormField('Competencia Gráfica (Forma de Texto)', 'text_form', 'textarea')}</div>
             {renderFormField('Estado de Conservación', 'conservation_status')}
             <div className="md:col-span-2 lg:col-span-3">{renderFormField('Tipo de Escritura', 'writing_type', 'textarea')}</div>
             <div className="md:col-span-2 lg:col-span-3">{renderFormField('Competencia Lingüística', 'linguistic_competence', 'textarea')}</div>

@@ -16,14 +16,13 @@ const getInitialCatalogData = (): Omit<Catalog, 'id'> => ({
     reference: '',
     author: '',
     publication_year: new Date().getFullYear(),
-    publication_place: '',
     catalog_location: '',
     exvoto_count: 0,
-    location_description: '',
+    related_places: '',
+    location: '',
     oldest_exvoto_date: null,
     newest_exvoto_date: null,
     other_exvotos: '',
-    numero_exvotos: null,
     comments: ''
 });
 
@@ -32,16 +31,14 @@ const columns: ColumnDef<Catalog>[] = [
     { key: 'reference', header: 'Referencia' },
     { key: 'author', header: 'Autor' },
     { key: 'publication_year', header: 'Año Publicación', type: 'number' },
-    { key: 'publication_place', header: 'Lugar Publicación' },
     { key: 'catalog_location', header: 'Ubicación del Catálogo' },
     { key: 'exvoto_count', header: 'Nº Exvotos', type: 'number', readOnly: true },
-    { key: 'related_places', header: 'Lugares Relacionados', readOnly: true },
-    { key: 'location_description', header: 'Descripción Ubicación', type: 'truncated' },
+    { key: 'related_places', header: 'Lugares Relacionados', type: 'truncated' },
+    { key: 'location', header: 'Ubicación', type: 'truncated' },
     { key: 'oldest_exvoto_date', header: 'Fecha Más Antigua', type: 'date' },
     { key: 'newest_exvoto_date', header: 'Fecha Más Reciente', type: 'date' },
-    { key: 'other_exvotos', header: 'Info exvotos', type: 'truncated' },
-    { key: 'numero_exvotos', header: 'Nº Total Exvotos', type: 'number' },
-    { key: 'comments', header: 'Comentarios', type: 'truncated' }
+    { key: 'other_exvotos', header: 'Info exvotos', type: 'richtext' },
+    { key: 'comments', header: 'Comentarios', type: 'richtext' }
 ];
 
 const CatalogPage: React.FC = () => {
@@ -118,14 +115,13 @@ const CatalogPage: React.FC = () => {
                     reference: catalog.reference,
                     author: catalog.author,
                     publication_year: catalog.publication_year,
-                    publication_place: catalog.publication_place,
                     catalog_location: catalog.catalog_location,
                     exvoto_count: catalog.exvoto_count,
-                    location_description: catalog.location_description,
+                    related_places: catalog.related_places,
+                    location: catalog.location,
                     oldest_exvoto_date: catalog.oldest_exvoto_date,
                     newest_exvoto_date: catalog.newest_exvoto_date,
                     other_exvotos: catalog.other_exvotos,
-                    numero_exvotos: catalog.numero_exvotos,
                     comments: catalog.comments
                 });
                 setIsModalOpen(true);
@@ -152,14 +148,13 @@ const CatalogPage: React.FC = () => {
                 reference: catalog.reference,
                 author: catalog.author,
                 publication_year: catalog.publication_year,
-                publication_place: catalog.publication_place,
                 catalog_location: catalog.catalog_location,
                 exvoto_count: catalog.exvoto_count,
-                location_description: catalog.location_description,
+                related_places: catalog.related_places,
+                location: catalog.location,
                 oldest_exvoto_date: catalog.oldest_exvoto_date,
                 newest_exvoto_date: catalog.newest_exvoto_date,
                 other_exvotos: catalog.other_exvotos,
-                numero_exvotos: catalog.numero_exvotos,
                 comments: catalog.comments
             });
             setIsModalOpen(true);
@@ -257,8 +252,8 @@ const CatalogPage: React.FC = () => {
 
     // Campos para la búsqueda
     const searchFields: (keyof Catalog)[] = [
-        'title', 'reference', 'author', 'publication_place', 
-        'catalog_location', 'location_description', 'other_exvotos', 'comments'
+        'title', 'reference', 'author',
+        'catalog_location', 'related_places', 'location', 'other_exvotos', 'comments'
     ];
 
     // Handle de filtrado desde SearchBar
@@ -356,13 +351,14 @@ const CatalogPage: React.FC = () => {
                         {renderFormField('Referencia', 'reference')}
                         {renderFormField('Autor', 'author')}
                         {renderFormField('Año de Publicación', 'publication_year', 'number')}
-                        {renderFormField('Lugar de Publicación', 'publication_place')}
                         {renderFormField('Ubicación del Catálogo', 'catalog_location')}
                         {renderFormField('Fecha Más Antigua (YYYY-MM-DD o X)', 'oldest_exvoto_date', 'text')}
                         {renderFormField('Fecha Más Reciente (YYYY-MM-DD o X)', 'newest_exvoto_date', 'text')}
-                        {renderFormField('Número Total Exvotos', 'numero_exvotos', 'number')}
                         <div className="md:col-span-2">
-                            {renderFormField('Descripción de Ubicación', 'location_description', 'textarea')}
+                            {renderFormField('Lugares Relacionados', 'related_places', 'textarea')}
+                        </div>
+                        <div className="md:col-span-2">
+                            {renderFormField('Ubicación', 'location', 'textarea')}
                         </div>
                         <div className="md:col-span-2">
                             {renderFormField('Info exvotos', 'other_exvotos', 'textarea')}

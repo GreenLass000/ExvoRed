@@ -43,6 +43,13 @@
       "when": 1757679962041,
       "tag": "0005_normal_ulik",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1731004800000,
+      "tag": "0006_catalog_schema_update",
+      "breakpoints": true
     }
   ]
 }

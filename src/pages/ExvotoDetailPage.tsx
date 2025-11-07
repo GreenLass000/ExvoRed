@@ -241,13 +241,13 @@ const ExvotoDetailPage: React.FC = () => {
                     <div className="space-y-6">
                       <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Textos y Notas</h2>
                       <dl className="space-y-4">
-                         <DetailField label="Transcripción" value={exvoto.transcription ? <p className="whitespace-pre-wrap font-serif italic">{exvoto.transcription}</p> : null} />
-                         <DetailField label="Tipo de Escritura" value={exvoto.writing_type ? <p className="whitespace-pre-wrap">{exvoto.writing_type}</p> : null} />
-                         <DetailField label="Competencia Lingüística" value={exvoto.linguistic_competence ? <p className="whitespace-pre-wrap">{exvoto.linguistic_competence}</p> : null} />
-                         <DetailField label="Referencias" value={exvoto.references ? <p className="whitespace-pre-wrap">{exvoto.references}</p> : null} />
-                         <DetailField label="Información Adicional" value={exvoto.extra_info} />
+                         <DetailField label="Transcripción" value={exvoto.transcription ? <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: exvoto.transcription }} /> : null} />
+                         <DetailField label="Tipo de Escritura" value={exvoto.writing_type ? <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: exvoto.writing_type }} /> : null} />
+                         <DetailField label="Competencia Lingüística" value={exvoto.linguistic_competence ? <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: exvoto.linguistic_competence }} /> : null} />
+                         <DetailField label="Referencias" value={exvoto.references ? <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: exvoto.references }} /> : null} />
+                         <DetailField label="Información Adicional" value={exvoto.extra_info ? <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: exvoto.extra_info }} /> : null} />
                          <DetailField label="Uso Capitales" value={exvoto.text_case} />
-                         <DetailField label="Competencia Gráfica" value={exvoto.text_form} />
+                         <DetailField label="Competencia Gráfica (Forma de Texto)" value={exvoto.text_form ? <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: exvoto.text_form }} /> : null} />
                       </dl>
                     </div>
                   </div>

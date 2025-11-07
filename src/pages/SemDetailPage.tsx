@@ -122,8 +122,10 @@ const SemDetailPage: React.FC = () => {
     const renderTextArea = (label: string, value: string | null | undefined) => (
         <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">{label}</label>
-            <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-md min-h-[100px] whitespace-pre-wrap">
-                {value !== null && value !== undefined && value !== '' ? value : '—'}
+            <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-md min-h-[100px]">
+                {value !== null && value !== undefined && value !== '' ? (
+                    <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: value }} />
+                ) : '—'}
             </div>
         </div>
     );

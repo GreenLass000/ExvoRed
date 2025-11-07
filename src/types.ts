@@ -24,15 +24,13 @@ export interface Catalog {
     reference: string | null;
     author: string | null;
     publication_year: number | null;
-    publication_place: string | null;
     catalog_location: string | null;
     exvoto_count: number | null;
-    related_places?: string | null; // Calculated field: related SEM places
-    location_description: string | null;
+    related_places: string | null;
+    location: string | null;
     oldest_exvoto_date: string | null;
     newest_exvoto_date: string | null;
     other_exvotos: string | null;
-    numero_exvotos: number | null;
     comments: string | null;
     updated_at?: string | null;
 }

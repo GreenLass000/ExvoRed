@@ -7,7 +7,7 @@ import { highlightText } from '../utils/highlightText';
 export type ColumnDef<T> = {
     key: keyof T | 'actions';
     header: string;
-    type?: 'text' | 'date' | 'number' | 'foreignKey' | 'clickable' | 'truncated';
+    type?: 'text' | 'date' | 'number' | 'foreignKey' | 'clickable' | 'truncated' | 'richtext';
     foreignKeyData?: Sem[];
     getDisplayValue?: (row: T) => React.ReactNode;
     onCellClick?: (row: T) => void;

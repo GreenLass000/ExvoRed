@@ -87,9 +87,23 @@ export const CellModal: React.FC<CellModalProps> = ({
 
   if (!isOpen) return null;
 
-  const isLongContent = content.length > 100;
-  const hasLineBreaks = content.includes('\n');
-  const estimatedLines = Math.max(3, Math.min(15, content.split('\n').length));
+  // Helper function to detect if content is HTML
+  const isHTML = (str: string) => {
+    return /<[^>]+>/.test(str);
+  };
+
+  // Helper function to strip HTML tags for plain text display
+  const stripHTML = (html: string) => {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  };
+
+  const contentIsHTML = isHTML(content);
+  const displayContent = contentIsHTML ? stripHTML(content) : content;
+  const isLongContent = displayContent.length > 100;
+  const hasLineBreaks = displayContent.includes('\n');
+  const estimatedLines = Math.max(3, Math.min(15, displayContent.split('\n').length));
 
   return (
     <div
@@ -219,9 +233,12 @@ export const CellModal: React.FC<CellModalProps> = ({
             {/* Content info */}
             <div className="flex items-center justify-between mb-3 text-sm text-gray-600 dark:text-gray-400">
               <div className="flex items-center gap-4">
-                <span>{content.length} caracteres</span>
+                <span>{displayContent.length} caracteres</span>
+                {contentIsHTML && (
+                  <span className="text-blue-600 dark:text-blue-400">Texto enriquecido</span>
+                )}
                 {hasLineBreaks && (
-                  <span>{content.split('\n').length} líneas</span>
+                  <span>{displayContent.split('\n').length} líneas</span>
                 )}
                 {isLongContent && (
                   <span className="text-amber-600 dark:text-amber-400">
@@ -238,26 +255,37 @@ export const CellModal: React.FC<CellModalProps> = ({
               </div>
             </div>
 
-            {/* Text area */}
+            {/* Content display - render as HTML if detected, otherwise as text */}
             <div className="flex-1 relative">
-              <textarea
-                ref={textareaRef}
-                value={content}
-                readOnly
-                className={cn(
-                  "w-full h-full p-3 border border-gray-300 dark:border-gray-600 rounded-md",
-                  "bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100",
-                  "font-mono text-sm leading-relaxed resize-none",
-                  "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                )}
-                style={{
-                  minHeight: `${estimatedLines * 1.5}rem`
-                }}
-                spellCheck={false}
-              />
+              {contentIsHTML ? (
+                <div
+                  className={cn(
+                    "w-full h-full p-3 border border-gray-300 dark:border-gray-600 rounded-md overflow-auto",
+                    "bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100",
+                    "prose prose-sm max-w-none dark:prose-invert"
+                  )}
+                  dangerouslySetInnerHTML={{ __html: content }}
+                />
+              ) : (
+                <textarea
+                  ref={textareaRef}
+                  value={content}
+                  readOnly
+                  className={cn(
+                    "w-full h-full p-3 border border-gray-300 dark:border-gray-600 rounded-md",
+                    "bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100",
+                    "font-mono text-sm leading-relaxed resize-none",
+                    "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  )}
+                  style={{
+                    minHeight: `${estimatedLines * 1.5}rem`
+                  }}
+                  spellCheck={false}
+                />
+              )}
 
               {/* Character limit indicator */}
-              {content.length > 1000 && (
+              {displayContent.length > 1000 && (
                 <div className="absolute top-2 right-2 px-2 py-1 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 text-xs rounded">
                   Texto extenso
                 </div>

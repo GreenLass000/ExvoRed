@@ -39,11 +39,11 @@ const columns: ColumnDef<Sem>[] = [
   { key: 'pictorial_exvoto_count', header: 'Nº Exvotos Pictóricos', type: 'number' },
   { key: 'oldest_exvoto_date', header: 'Fecha más antigua', type: 'date' },
   { key: 'newest_exvoto_date', header: 'Fecha más reciente', type: 'date' },
-  { key: 'other_exvotos', header: 'Info exvotos', type: 'truncated' },
+  { key: 'other_exvotos', header: 'Info exvotos', type: 'richtext' },
   { key: 'numero_exvotos', header: 'Nº Total Exvotos', type: 'number' },
   { key: 'contact', header: 'Contacto' },
-  { key: 'comments', header: 'Comentarios', type: 'truncated' },
-  { key: 'references', header: 'Referencias', type: 'truncated' }
+  { key: 'comments', header: 'Comentarios', type: 'richtext' },
+  { key: 'references', header: 'Referencias', type: 'richtext' }
 ];
 
 const SemPage: React.FC = () => {
