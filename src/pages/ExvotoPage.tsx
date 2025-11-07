@@ -40,6 +40,9 @@ const getInitialExvotoData = (): Omit<Exvoto, 'id'> => ({
   dimensions: '',
   text_case: '',
   text_form: '',
+  writing_type: '',
+  linguistic_competence: '',
+  references: '',
   extra_info: '',
   transcription: '',
   conservation_status: '',
@@ -192,7 +195,7 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
       getDisplayValue: row => getSemDisplayValue(row.offering_sem_id),
       onCellClick: row => row.offering_sem_id && navigate(`/sem/${row.offering_sem_id}`)
     },
-    { key: 'lugar_origen', header: 'Lugar de Origen' },
+    { key: 'lugar_origen', header: 'Lugar Origen Devoto/a' },
     {
       key: 'conservation_sem_id',
       header: 'SEM Conservación',
@@ -202,7 +205,7 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
       onCellClick: row => row.conservation_sem_id && navigate(`/sem/${row.conservation_sem_id}`)
     },
     { key: 'province', header: 'Provincia' },
-    { key: 'virgin_or_saint', header: 'Virgen/Santo' },
+    { key: 'virgin_or_saint', header: 'Divinidad' },
     { key: 'exvoto_date', header: 'Fecha Exvoto', type: 'date' },
     { key: 'epoch', header: 'Época (25 años)' },
     { key: 'benefited_name', header: 'Beneficiado' },
@@ -211,13 +214,16 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
     { key: 'offerer_relation', header: 'Relación Oferente' },
     { key: 'characters', header: 'Personajes' },
     { key: 'profession', header: 'Profesión' },
-    { key: 'social_status', header: 'Estatus Social' },
+    { key: 'social_status', header: 'Subalternidad' },
     { key: 'miracle', header: 'Milagro' },
     { key: 'miracle_place', header: 'Lugar Milagro' },
-    { key: 'material', header: 'Material' },
+    { key: 'material', header: 'Soporte Material' },
     { key: 'dimensions', header: 'Dimensiones' },
-    { key: 'text_case', header: 'Uso Mayúsculas' },
-    { key: 'text_form', header: 'Forma del Texto' },
+    { key: 'text_case', header: 'Uso Capitales' },
+    { key: 'text_form', header: 'Competencia Gráfica' },
+    { key: 'writing_type', header: 'Tipo de Escritura', type: 'truncated' },
+    { key: 'linguistic_competence', header: 'Competencia Lingüística', type: 'truncated' },
+    { key: 'references', header: 'Referencias', type: 'truncated' },
     { key: 'conservation_status', header: 'Estado Conservación' },
     { key: 'extra_info', header: 'Info Extra', type: 'truncated' },
     { key: 'transcription', header: 'Transcripción', type: 'truncated' }
@@ -354,11 +360,12 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
 
   // Campos para la búsqueda
   const searchFields: (keyof Exvoto)[] = [
-    'internal_id', 'lugar_origen', 'province', 'virgin_or_saint', 'epoch', 
-    'benefited_name', 'offerer_name', 'offerer_gender', 
-    'offerer_relation', 'characters', 'profession', 
-    'social_status', 'miracle', 'miracle_place', 
-    'material', 'dimensions', 'text_case', 'text_form', 
+    'internal_id', 'lugar_origen', 'province', 'virgin_or_saint', 'epoch',
+    'benefited_name', 'offerer_name', 'offerer_gender',
+    'offerer_relation', 'characters', 'profession',
+    'social_status', 'miracle', 'miracle_place',
+    'material', 'dimensions', 'text_case', 'text_form',
+    'writing_type', 'linguistic_competence', 'references',
     'conservation_status', 'extra_info', 'transcription'
   ];
 
@@ -511,10 +518,10 @@ return (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {renderFormField('ID Interno', 'internal_id')}
             {renderFormField('SEM Ofrenda', 'offering_sem_id', 'select', sems.map(s => ({ value: s.id, label: s.name || `SEM #${s.id}` })))}
-            {renderFormField('Lugar de Origen', 'lugar_origen')}
+            {renderFormField('Lugar Origen Devoto/a', 'lugar_origen')}
             {renderFormField('SEM Conservación', 'conservation_sem_id', 'select', sems.map(s => ({ value: s.id, label: s.name || `SEM #${s.id}` })))}
             {renderFormField('Provincia', 'province')}
-            {renderFormField('Virgen o Santo', 'virgin_or_saint')}
+            {renderFormField('Divinidad', 'virgin_or_saint')}
             {renderFormField('Fecha Exvoto', 'exvoto_date', 'text')}
             {renderFormField('Época (25 años)', 'epoch', 'epoch')}
             {renderFormField('Nombre Beneficiado', 'benefited_name')}
@@ -528,14 +535,17 @@ return (
             {renderFormField('Relación Oferente', 'offerer_relation')}
             {renderFormField('Personajes', 'characters', 'tagselect')}
             {renderFormField('Profesión', 'profession')}
-            {renderFormField('Estatus Social', 'social_status')}
+            {renderFormField('Subalternidad', 'social_status')}
             {renderFormField('Milagro', 'miracle', 'select', miracles.map(m => ({ value: m.name, label: m.name })))}
             {renderFormField('Lugar del Milagro', 'miracle_place')}
-            {renderFormField('Material', 'material')}
+            {renderFormField('Soporte Material', 'material')}
             {renderFormField('Dimensiones', 'dimensions')}
-            {renderFormField('Uso de Mayúsculas', 'text_case')}
-            {renderFormField('Forma del Texto', 'text_form')}
+            {renderFormField('Uso Capitales', 'text_case')}
+            {renderFormField('Competencia Gráfica', 'text_form')}
             {renderFormField('Estado de Conservación', 'conservation_status')}
+            <div className="md:col-span-2 lg:col-span-3">{renderFormField('Tipo de Escritura', 'writing_type', 'textarea')}</div>
+            <div className="md:col-span-2 lg:col-span-3">{renderFormField('Competencia Lingüística', 'linguistic_competence', 'textarea')}</div>
+            <div className="md:col-span-2 lg:col-span-3">{renderFormField('Referencias', 'references', 'textarea')}</div>
             {renderFormField('Información Extra', 'extra_info', 'textarea')}
             {renderFormField('Transcripción', 'transcription', 'textarea')}
             {/* Campo de imagen */}

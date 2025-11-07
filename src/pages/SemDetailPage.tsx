@@ -160,7 +160,7 @@ const SemDetailPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-6">
-                    {renderTextArea('Otros Exvotos', sem.other_exvotos)}
+                    {renderTextArea('Info exvotos', sem.other_exvotos)}
                     {renderTextArea('Comentarios', sem.comments)}
                     {renderTextArea('Referencias', sem.references)}
                 </div>

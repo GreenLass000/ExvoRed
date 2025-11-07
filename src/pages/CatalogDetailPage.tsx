@@ -171,7 +171,7 @@ const CatalogDetailPage: React.FC = () => {
 
                 <div className="space-y-6">
                     {renderTextArea('Descripción de Ubicación', catalog.location_description)}
-                    {renderTextArea('Otros Exvotos', catalog.other_exvotos)}
+                    {renderTextArea('Info exvotos', catalog.other_exvotos)}
                     {renderTextArea('Comentarios', catalog.comments)}
                 </div>
 

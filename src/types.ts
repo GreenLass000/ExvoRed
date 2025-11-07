@@ -60,6 +60,9 @@ export interface Exvoto {
     dimensions: string | null;
     text_case: string | null;
     text_form: string | null;
+    writing_type: string | null; // Tipo de escritura (texto largo enriquecido)
+    linguistic_competence: string | null; // Competencia Lingüística (texto largo enriquecido)
+    references: string | null; // Referencias (texto largo enriquecido)
     extra_info: string | null;
     transcription: string | null;
     conservation_status: string | null;

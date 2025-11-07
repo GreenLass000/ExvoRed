@@ -39,7 +39,7 @@ const columns: ColumnDef<Sem>[] = [
   { key: 'pictorial_exvoto_count', header: 'Nº Exvotos Pictóricos', type: 'number' },
   { key: 'oldest_exvoto_date', header: 'Fecha más antigua', type: 'date' },
   { key: 'newest_exvoto_date', header: 'Fecha más reciente', type: 'date' },
-  { key: 'other_exvotos', header: 'Otros Exvotos', type: 'truncated' },
+  { key: 'other_exvotos', header: 'Info exvotos', type: 'truncated' },
   { key: 'numero_exvotos', header: 'Nº Total Exvotos', type: 'number' },
   { key: 'contact', header: 'Contacto' },
   { key: 'comments', header: 'Comentarios', type: 'truncated' },
@@ -326,7 +326,7 @@ const SemPage: React.FC = () => {
             {renderFormField('Divinidad Asociada', 'associated_divinity')}
             {renderFormField('Festividad', 'festivity')}
             {renderFormField('Contacto', 'contact')}
-            <div className="md:col-span-2">{renderFormField('Otros Exvotos', 'other_exvotos', 'textarea')}</div>
+            <div className="md:col-span-2">{renderFormField('Info exvotos', 'other_exvotos', 'textarea')}</div>
             <div className="md:col-span-2">{renderFormField('Comentarios', 'comments', 'textarea')}</div>
             <div className="md:col-span-2">{renderFormField('Referencias', 'references', 'textarea')}</div>
           </div>

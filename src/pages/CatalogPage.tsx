@@ -39,7 +39,7 @@ const columns: ColumnDef<Catalog>[] = [
     { key: 'location_description', header: 'Descripción Ubicación', type: 'truncated' },
     { key: 'oldest_exvoto_date', header: 'Fecha Más Antigua', type: 'date' },
     { key: 'newest_exvoto_date', header: 'Fecha Más Reciente', type: 'date' },
-    { key: 'other_exvotos', header: 'Otros Exvotos', type: 'truncated' },
+    { key: 'other_exvotos', header: 'Info exvotos', type: 'truncated' },
     { key: 'numero_exvotos', header: 'Nº Total Exvotos', type: 'number' },
     { key: 'comments', header: 'Comentarios', type: 'truncated' }
 ];
@@ -365,7 +365,7 @@ const CatalogPage: React.FC = () => {
                             {renderFormField('Descripción de Ubicación', 'location_description', 'textarea')}
                         </div>
                         <div className="md:col-span-2">
-                            {renderFormField('Otros Exvotos', 'other_exvotos', 'textarea')}
+                            {renderFormField('Info exvotos', 'other_exvotos', 'textarea')}
                         </div>
                         <div className="md:col-span-2">
                             {renderFormField('Comentarios', 'comments', 'textarea')}

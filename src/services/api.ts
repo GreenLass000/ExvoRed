@@ -211,6 +211,10 @@ export const getAllDivinities = (): Promise<Divinity[]> => {
     return apiCall<PaginatedResponse<Divinity>>('/divinities?page=1&limit=10000').then(res => res.data);
 };
 
+export const getDivinityById = (id: number): Promise<Divinity> => {
+    return apiCall<Divinity>(`/divinities/${id}`);
+};
+
 export const createDivinity = (payload: Partial<Divinity>): Promise<Divinity> => {
     return apiCall<Divinity>('/divinities', {
         method: 'POST',

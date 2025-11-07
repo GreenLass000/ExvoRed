@@ -163,7 +163,7 @@ const ExvotoDetailPage: React.FC = () => {
                 <div className="flex justify-between items-start gap-4">
                     <div>
                         <h1 className="text-3xl font-bold text-slate-800">{exvoto.internal_id || '—'}</h1>
-                        <p className="text-md text-slate-500 mt-1">Virgen/Santo: {exvoto.virgin_or_saint || '—'}</p>
+                        <p className="text-md text-slate-500 mt-1">Divinidad: {exvoto.virgin_or_saint || '—'}</p>
                         <p className="text-sm text-slate-400 mt-1">ID: {exvoto.id} | Última modificación: {exvoto.updated_at || '—'}</p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -211,7 +211,7 @@ const ExvotoDetailPage: React.FC = () => {
                       <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Ubicación</h2>
                       <dl className="space-y-4">
                         <DetailField label="Lugar de Ofrenda (SEM)" value={exvoto.offering_sem_id ? semNameMap[exvoto.offering_sem_id] : null} />
-                        <DetailField label="Lugar de Origen" value={exvoto.lugar_origen} />
+                        <DetailField label="Lugar Origen Devoto/a" value={exvoto.lugar_origen} />
                         <DetailField label="Lugar de Conservación (SEM)" value={exvoto.conservation_sem_id ? semNameMap[exvoto.conservation_sem_id] : null} />
                       </dl>
                     </div>
@@ -224,7 +224,7 @@ const ExvotoDetailPage: React.FC = () => {
                         <DetailField label="Género del Oferente" value={exvoto.offerer_gender} />
                         <DetailField label="Relación Oferente-Beneficiado" value={exvoto.offerer_relation} />
                         <DetailField label="Profesión" value={exvoto.profession} />
-                        <DetailField label="Estatus Social" value={exvoto.social_status} />
+                        <DetailField label="Subalternidad" value={exvoto.social_status} />
                       </dl>
                     </div>
 
@@ -232,7 +232,7 @@ const ExvotoDetailPage: React.FC = () => {
                       <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Descripción del Exvoto</h2>
                       <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                         <DetailField label="Personajes representados" value={exvoto.characters} />
-                        <DetailField label="Material" value={exvoto.material} />
+                        <DetailField label="Soporte Material" value={exvoto.material} />
                         <DetailField label="Dimensiones" value={exvoto.dimensions} />
                         <DetailField label="Estado de Conservación" value={exvoto.conservation_status} />
                       </dl>
@@ -242,9 +242,12 @@ const ExvotoDetailPage: React.FC = () => {
                       <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Textos y Notas</h2>
                       <dl className="space-y-4">
                          <DetailField label="Transcripción" value={exvoto.transcription ? <p className="whitespace-pre-wrap font-serif italic">{exvoto.transcription}</p> : null} />
+                         <DetailField label="Tipo de Escritura" value={exvoto.writing_type ? <p className="whitespace-pre-wrap">{exvoto.writing_type}</p> : null} />
+                         <DetailField label="Competencia Lingüística" value={exvoto.linguistic_competence ? <p className="whitespace-pre-wrap">{exvoto.linguistic_competence}</p> : null} />
+                         <DetailField label="Referencias" value={exvoto.references ? <p className="whitespace-pre-wrap">{exvoto.references}</p> : null} />
                          <DetailField label="Información Adicional" value={exvoto.extra_info} />
-                         <DetailField label="Uso de Mayúsculas" value={exvoto.text_case} />
-                         <DetailField label="Forma del Texto" value={exvoto.text_form} />
+                         <DetailField label="Uso Capitales" value={exvoto.text_case} />
+                         <DetailField label="Competencia Gráfica" value={exvoto.text_form} />
                       </dl>
                     </div>
                   </div>

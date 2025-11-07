@@ -15,11 +15,11 @@ const DivinityDetailPage: React.FC = () => {
 
             setLoading(true);
             try {
-                const divinities = await api.getDivinities();
-                const foundDivinity = divinities.find(d => d.id === parseInt(id));
-                setDivinity(foundDivinity || null);
+                const foundDivinity = await api.getDivinityById(parseInt(id));
+                setDivinity(foundDivinity);
             } catch (error) {
                 console.error('Error fetching divinity:', error);
+                setDivinity(null);
             } finally {
                 setLoading(false);
             }

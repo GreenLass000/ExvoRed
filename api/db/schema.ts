@@ -78,6 +78,9 @@ export const exvoto = sqliteTable('exvoto', {
   dimensions: text('dimensions', { length: 50 }),
   text_case: text('text_case', { length: 20 }),
   text_form: text('text_form', { length: 20 }),
+  writing_type: text('writing_type'), // Tipo de escritura (texto largo enriquecido)
+  linguistic_competence: text('linguistic_competence'), // Competencia Lingüística (texto largo enriquecido)
+  references: text('references'), // Referencias (texto largo enriquecido)
   extra_info: text('extra_info', { length: 500 }),
   transcription: text('transcription'),
   conservation_status: text('conservation_status', { length: 100 }),
