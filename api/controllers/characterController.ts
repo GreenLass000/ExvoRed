@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { eq } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { character, NewCharacter } from '../db/schema.js';
+import { character } from '../db/schema.js';
+import type { NewCharacter } from '../db/schema.js';
 
 export const characterController = {
   // GET /api/characters - Obtener todos los personajes

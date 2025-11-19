@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { eq } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { miracle, NewMiracle } from '../db/schema.js';
+import { miracle } from '../db/schema.js';
+import type { NewMiracle } from '../db/schema.js';
 
 export const miracleController = {
   // GET /api/miracles - Obtener todos los milagros

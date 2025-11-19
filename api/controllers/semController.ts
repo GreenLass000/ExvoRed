@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { eq, desc, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { sem, NewSem } from '../db/schema.js';
+import { sem } from '../db/schema.js';
+import type { NewSem } from '../db/schema.js';
 
 export const semController = {
   // GET /api/sems - Obtener todos los sems con paginación

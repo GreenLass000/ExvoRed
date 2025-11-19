@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { eq, desc, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { catalog, NewCatalog, catalogSem, sem, catalogExvoto } from '../db/schema.js';
+import { catalog, catalogSem, sem, catalogExvoto } from '../db/schema.js';
+import type { NewCatalog } from '../db/schema.js';
 
 export const catalogController = {
   // GET /api/catalogs - Obtener todos los catálogos con estadísticas y paginación
@@ -22,7 +23,7 @@ export const catalogController = {
           catalog_location: catalog.catalog_location,
           exvoto_count: sql<number>`COUNT(DISTINCT ${catalogExvoto.exvoto_id})`.as('exvoto_count'),
           related_places: sql<string>`GROUP_CONCAT(DISTINCT ${sem.town})`.as('related_places'),
-          location: catalog.location,
+          location: catalog.location_description,
           oldest_exvoto_date: catalog.oldest_exvoto_date,
           newest_exvoto_date: catalog.newest_exvoto_date,
           other_exvotos: catalog.other_exvotos,
@@ -73,7 +74,7 @@ export const catalogController = {
           catalog_location: catalog.catalog_location,
           exvoto_count: sql<number>`COUNT(DISTINCT ${catalogExvoto.exvoto_id})`.as('exvoto_count'),
           related_places: sql<string>`GROUP_CONCAT(DISTINCT ${sem.town})`.as('related_places'),
-          location: catalog.location,
+          location: catalog.location_description,
           oldest_exvoto_date: catalog.oldest_exvoto_date,
           newest_exvoto_date: catalog.newest_exvoto_date,
           other_exvotos: catalog.other_exvotos,
@@ -101,9 +102,15 @@ export const catalogController = {
   // POST /api/catalogs - Crear un nuevo catálogo
   async create(req: Request, res: Response) {
     try {
-      const catalogData = req.body as NewCatalog;
+      const body = req.body as Partial<NewCatalog & { location?: string | null }>;
       const now = new Date().toISOString();
-      const result = await db.insert(catalog).values({ ...catalogData, updated_at: now } as any).returning();
+      const payload: any = {
+        ...body,
+        // Mapear alias de UI a columna real
+        location_description: (body as any).location ?? (body as any).location_description ?? null,
+        updated_at: now,
+      };
+      const result = await db.insert(catalog).values(payload).returning();
       res.status(201).json(result[0]);
     } catch (error) {
       console.error('Error creating catalog:', error);
@@ -115,11 +122,17 @@ export const catalogController = {
   async update(req: Request, res: Response) {
     try {
       const id = parseInt(req.params.id);
-      const catalogData = req.body as Partial<NewCatalog>;
+      const body = req.body as Partial<NewCatalog & { location?: string | null }>;
       const now = new Date().toISOString();
 
+      const payload: any = {
+        ...body,
+        location_description: (body as any).location ?? (body as any).location_description,
+        updated_at: now,
+      };
+
       const result = await db.update(catalog)
-        .set({ ...catalogData, updated_at: now } as any)
+        .set(payload)
         .where(eq(catalog.id, id))
         .returning();
       

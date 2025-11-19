@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { and, eq, desc, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { exvoto, exvotoImage, NewExvoto } from '../db/schema.js';
+import { exvoto, exvotoImage } from '../db/schema.js';
+import type { NewExvoto } from '../db/schema.js';
 
 // Helper: detectar mime por cabecera
 function detectMimeType(buffer: Buffer): string {
