@@ -42,7 +42,7 @@ const ExvotoDetailPage: React.FC = () => {
                 const exvotoId = parseInt(id, 10);
                 const [exvotoData, semsData, exvotoImages] = await Promise.all([
                     api.getExvotoById(exvotoId),
-                    api.getSems(),
+                    api.getAllSems(),
                     api.getExvotoImages(exvotoId)
                 ]);
 

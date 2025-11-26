@@ -15,9 +15,8 @@ const SemDetailPage: React.FC = () => {
             
             setLoading(true);
             try {
-                const sems = await api.getSems();
-                const foundSem = sems.find(s => s.id === parseInt(id));
-                setSem(foundSem || null);
+                const foundSem = await api.getSemById(parseInt(id, 10));
+                setSem(foundSem);
             } catch (error) {
                 console.error('Error fetching SEM:', error);
             } finally {

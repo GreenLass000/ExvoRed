@@ -10,7 +10,7 @@ export const getSemsWithCatalog = async (catalogId: number): Promise<Sem[]> => {
     try {
         const [catalogSems, sems] = await Promise.all([
             api.getCatalogSems(),
-            api.getSems()
+            api.getAllSems()
         ]);
 
         // Filtrar las relaciones catalog_sem para el catálogo específico
