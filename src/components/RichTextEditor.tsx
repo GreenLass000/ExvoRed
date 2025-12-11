@@ -38,6 +38,39 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (disabled) return;
+
+    if (e.ctrlKey || e.metaKey) {
+      const key = e.key.toLowerCase();
+      let handled = false;
+      switch (key) {
+        case 's':
+          execCommand('strikeThrough');
+          handled = true;
+          break;
+        case 'b':
+          execCommand('bold');
+          handled = true;
+          break;
+        case 'i':
+          execCommand('italic');
+          handled = true;
+          break;
+        case 'u':
+          execCommand('underline');
+          handled = true;
+          break;
+      }
+
+      if (handled) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleInput();
+      }
+    }
+  };
+
   const execCommand = (command: string, value?: string) => {
     document.execCommand(command, false, value);
     editorRef.current?.focus();
@@ -102,7 +135,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         </ToolbarButton>
 
         {/* Tachado */}
-        <ToolbarButton onClick={() => execCommand('strikeThrough')} title="Tachado">
+        <ToolbarButton onClick={() => execCommand('strikeThrough')} title="Tachado (Ctrl+S)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M16 4H9a3 3 0 0 0-2.83 4" />
             <path d="M14 12a4 4 0 0 1 0 8H6" />
@@ -185,6 +218,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         ref={editorRef}
         contentEditable={!disabled}
         onInput={handleInput}
+        onKeyDown={handleKeyDown}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         className={cn(

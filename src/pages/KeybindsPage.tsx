@@ -117,9 +117,13 @@ const KeybindsPage: React.FC = () => {
     { label: 'Copiar contenido de la celda seleccionada', keys: [<><K>Ctrl</K> + <K>C</K></>] },
     { label: 'Duplicar fila', keys: [<><K>Ctrl</K> + <K>d</K></>] },
     { label: 'Imprimir', keys: [<><K>Ctrl</K> + <K>P</K></>, 'p'] },
-    { label: 'Exportar', keys: [<><K>Ctrl</K> + <K>S</K></>] },
+    { label: 'Exportar (tablas tipo Excel)', keys: [<><K>Ctrl</K> + <K>S</K></>] },
     { label: 'Abrir/cerrar panel de filtros/columnas', keys: [<><K>Ctrl</K> + <K>F</K></>] },
     { label: 'Resetear configuración de columnas', keys: [<><K>Ctrl</K> + <K>R</K></>] }
+  ];
+
+  const richTextActions: Item[] = [
+    { label: 'Tachado en texto enriquecido', keys: [<><K>Ctrl</K> + <K>S</K></>] },
   ];
 
   const quickNav: Item[] = [
@@ -148,6 +152,8 @@ const KeybindsPage: React.FC = () => {
 
       <Section title="Navegación rápida entre secciones" items={quickNav} />
 
+      <Section title="Editor de texto enriquecido" items={richTextActions} />
+
       <section className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-blue-800 text-sm">
           Nota: algunos atajos se desactivan si hay un modal abierto o si estás escribiendo en un campo de texto.
@@ -158,4 +164,3 @@ const KeybindsPage: React.FC = () => {
 };
 
 export default KeybindsPage;
-

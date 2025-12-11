@@ -114,6 +114,7 @@ export const EditCellModal: React.FC<EditCellModalProps> = ({
   // Usar RichTextEditor para campos de tipo 'truncated' (transcripciones, comentarios largos, etc.) o textos largos
   const shouldUseRichTextEditor =
     column?.type === 'truncated' ||
+    column?.type === 'richtext' ||
     (typeof editValue === 'string' && (editValue.length > 100 || editValue.includes('\n')));
 
   return (
