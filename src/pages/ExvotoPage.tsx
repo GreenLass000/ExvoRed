@@ -219,7 +219,7 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
     },
     { key: 'province', header: 'Provincia' },
     { key: 'virgin_or_saint', header: 'Divinidad' },
-    { key: 'exvoto_date', header: 'Fecha Exvoto', type: 'date' },
+    { key: 'exvoto_date', header: 'Fecha Exvoto' },
     { key: 'epoch', header: 'Época (25 años)' },
     { key: 'benefited_name', header: 'Beneficiado' },
     { key: 'offerer_name', header: 'Oferente' },
