@@ -52,6 +52,27 @@ function bufferToDataUrl(value: any): string | null {
   return `data:${mime};base64,${buf.toString('base64')}`;
 }
 
+function buildImageUrl(id: number) {
+  return `/api/exvotos/${id}/image`;
+}
+
+function extractExvotoIdFromImageUrl(value: string): number | null {
+  const match = value.match(/\/api\/exvotos\/(\d+)\/image/i);
+  if (!match) return null;
+  const parsed = parseInt(match[1], 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+async function getExistingImageBuffer(id: number): Promise<Buffer | null> {
+  const found = await db
+    .select({ image: exvoto.image })
+    .from(exvoto)
+    .where(eq(exvoto.id, id))
+    .limit(1);
+  if (!found[0]?.image) return null;
+  return toBuffer(found[0].image);
+}
+
 export const exvotoController = {
   // GET /api/exvotos - Obtener todos los exvotos
   async getAll(req: Request, res: Response) {
@@ -65,10 +86,10 @@ export const exvotoController = {
         .limit(limit)
         .offset(offset);
 
-      // Convertir imagen a data URL para el frontend
       const mapped = rows.map((r: any) => ({
         ...r,
-        image: bufferToDataUrl(r.image)
+        // En listados: enviar sólo URL de la imagen para evitar payloads enormes
+        image: r.image ? buildImageUrl(r.id) : null
       }));
 
       // Obtener el total de registros
@@ -99,9 +120,9 @@ export const exvotoController = {
       if (result.length === 0) {
         return res.status(404).json({ error: 'Exvoto not found' });
       }
-      
       const row: any = result[0];
-      row.image = bufferToDataUrl(row.image);
+      // En detalle devolvemos data URL para compatibilidad, pero también servimos por URL
+      row.image = row.image ? buildImageUrl(row.id) : null;
       res.json(row);
     } catch (error) {
       console.error('Error fetching exvoto:', error);
@@ -115,10 +136,21 @@ export const exvotoController = {
       const exvotoData = req.body as any as NewExvoto;
       const now = new Date().toISOString();
 
-      // Convertir imagen entrante a Buffer si es string
+      // Convertir imagen entrante a Buffer si es string o referencia a otra imagen
+      const incomingImage = (exvotoData as any).image;
       let imageBuffer: Buffer | null = null;
-      if (typeof (exvotoData as any).image === 'string') {
-        imageBuffer = toBuffer((exvotoData as any).image);
+      if (incomingImage !== undefined && incomingImage !== null) {
+        if (typeof incomingImage === 'string') {
+          const fromUrlId = extractExvotoIdFromImageUrl(incomingImage.trim());
+          if (fromUrlId !== null) {
+            imageBuffer = await getExistingImageBuffer(fromUrlId);
+          } else {
+            imageBuffer = toBuffer(incomingImage);
+          }
+        } else {
+          imageBuffer = toBuffer(incomingImage);
+        }
+
         if (imageBuffer) {
           const mime = detectMimeType(imageBuffer);
           if (!ALLOWED_IMAGE_MIME.has(mime)) {
@@ -132,7 +164,7 @@ export const exvotoController = {
       const result = await db.insert(exvoto).values(payload).returning();
       // Devolver con data URL para frontend
       const row: any = result[0];
-      row.image = bufferToDataUrl(row.image);
+      row.image = row.image ? buildImageUrl(row.id) : null;
       res.status(201).json(row);
     } catch (error) {
       console.error('Error creating exvoto:', error);
@@ -148,15 +180,36 @@ export const exvotoController = {
       const now = new Date().toISOString();
 
       const payload: any = { ...exvotoData, updated_at: now };
-      if (typeof (exvotoData as any).image === 'string') {
-        const buf = toBuffer((exvotoData as any).image);
+      const incomingImage = (exvotoData as any).image;
+      if (incomingImage === undefined) {
+        delete payload.image; // no tocar la imagen existente
+      } else if (incomingImage === null) {
+        payload.image = null; // eliminar imagen
+      } else {
+        let buf: Buffer | null = null;
+        if (typeof incomingImage === 'string') {
+          const trimmed = incomingImage.trim();
+          const fromUrlId = extractExvotoIdFromImageUrl(trimmed);
+          if (fromUrlId !== null) {
+            buf = await getExistingImageBuffer(fromUrlId);
+            // Si no encontramos la imagen de origen, no sobrescribimos
+            if (!buf) delete payload.image;
+          } else {
+            buf = toBuffer(trimmed);
+          }
+        } else {
+          buf = toBuffer(incomingImage);
+        }
+
         if (buf) {
           const mime = detectMimeType(buf);
           if (!ALLOWED_IMAGE_MIME.has(mime)) {
             return res.status(400).json({ error: 'Solo se permiten imágenes JPG, JPEG o PNG.' });
           }
+          payload.image = buf;
+        } else {
+          delete payload.image;
         }
-        payload.image = buf;
       }
 
       const result = await db.update(exvoto)
@@ -169,7 +222,7 @@ export const exvotoController = {
       }
       
       const row: any = result[0];
-      row.image = bufferToDataUrl(row.image);
+      row.image = row.image ? buildImageUrl(row.id) : null;
       res.json(row);
     } catch (error) {
       console.error('Error updating exvoto:', error);
@@ -260,6 +313,29 @@ export const exvotoController = {
     } catch (error) {
       console.error('Error deleting exvoto image:', error);
       res.status(500).json({ error: 'Failed to delete image' });
+    }
+  },
+
+  // GET /api/exvotos/:id/image - Servir imagen principal (binaria)
+  async getImage(req: Request, res: Response) {
+    try {
+      const id = parseInt(req.params.id);
+      const result = await db.select().from(exvoto).where(eq(exvoto.id, id));
+      if (result.length === 0) {
+        return res.status(404).json({ error: 'Exvoto not found' });
+      }
+      const row: any = result[0];
+      const buf = toBuffer(row.image);
+      if (!buf) {
+        return res.status(404).json({ error: 'Image not found' });
+      }
+      const mime = detectMimeType(buf);
+      res.setHeader('Content-Type', mime);
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.send(Buffer.from(buf));
+    } catch (error) {
+      console.error('Error serving exvoto image:', error);
+      res.status(500).json({ error: 'Failed to fetch image' });
     }
   }
 };

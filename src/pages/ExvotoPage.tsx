@@ -66,6 +66,7 @@ const ExvotoPage: React.FC = () => {
   const [newExvotoData, setNewExvotoData] = useState<Omit<Exvoto, 'id'>>(getInitialExvotoData());
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [hasUnsaved, setHasUnsaved] = useState(false);
+  const [imageChanged, setImageChanged] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
   // Modal rápido para crear SEM desde el formulario de Exvoto
@@ -105,23 +106,30 @@ const ExvotoPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  const mastersLoaded = useRef(false);
+
   const fetchData = useCallback(async (page: number) => {
     setLoading(true);
     try {
-      const [exvotoResponse, semData, characterData, miracleData] = await Promise.all([
-        api.getExvotos(page, itemsPerPage),
-        api.getAllSems(),
-        api.getCharacters(),
-        api.getMiracles()
-      ]);
+      // Cargar maestros una sola vez
+      if (!mastersLoaded.current) {
+        const [semData, characterData, miracleData] = await Promise.all([
+          api.getAllSems(),
+          api.getCharacters(),
+          api.getMiracles()
+        ]);
+        setSems(semData);
+        setCharacters(characterData);
+        setMiracles(miracleData);
+        mastersLoaded.current = true;
+      }
+
+      const exvotoResponse = await api.getExvotos(page, itemsPerPage);
 
       setExvotos(exvotoResponse.data);
       setTotalPages(exvotoResponse.pagination.totalPages);
       setTotalRecords(exvotoResponse.pagination.total);
       setCurrentPage(exvotoResponse.pagination.page);
-      setSems(semData);
-      setCharacters(characterData);
-      setMiracles(miracleData);
     } catch (error) {
       console.error("Error fetching data:", error);
       showToast('Error al cargar los datos. Por favor, recarga la página.', 'error');
@@ -181,7 +189,12 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
         const src = getImageSrc(value as string | null);
         return (
           <div className="flex items-center justify-center w-full">
-            <img src={src} alt="Miniatura" className="h-12 w-12 object-cover rounded border border-gray-200 bg-gray-100" />
+            <img
+              src={src}
+              alt="Miniatura"
+              className="h-12 w-12 object-cover rounded border border-gray-200 bg-gray-100"
+              loading="lazy"
+            />
           </div>
         );
       }
@@ -284,6 +297,7 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
     setNewExvotoData(getInitialExvotoData());
     setIsModalOpen(true);
     setHasUnsaved(false);
+    setImageChanged(false);
   };
 
   const handleEditExvoto = (id: number) => {
@@ -293,6 +307,7 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
       setEditingExvoto(exvoto);
       setNewExvotoData({ ...rest });
       setIsModalOpen(true);
+      setImageChanged(false);
     }
   };
 
@@ -300,6 +315,7 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
     setIsModalOpen(false);
     setEditingExvoto(null);
     setHasUnsaved(false);
+    setImageChanged(false);
   };
 
   const handleFormChange = (e: React.ChangeEvent<any>) => {
@@ -321,8 +337,13 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const payload: Partial<Exvoto> = { ...newExvotoData };
+      // Si no se ha cambiado la imagen en edición, no enviar el campo para no sobrescribir con la URL
+      if (editingExvoto && !imageChanged) {
+        delete (payload as any).image;
+      }
       if (editingExvoto) {
-        const updated = await api.updateExvoto(editingExvoto.id, newExvotoData);
+        const updated = await api.updateExvoto(editingExvoto.id, payload);
         // Subir imágenes adicionales seleccionadas (si hay más de una)
         const extra = selectedImages.slice(1);
         if (extra.length > 0) {
@@ -336,7 +357,7 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
           showToast('Exvoto actualizado correctamente', 'success');
         }
       } else {
-        const created = await api.createExvoto(newExvotoData);
+        const created = await api.createExvoto(payload as Omit<Exvoto, 'id'>);
         const extra = selectedImages.slice(1);
         if (extra.length > 0) {
           try {
@@ -581,6 +602,7 @@ return (
                         setSelectedImages(urls);
                         setNewExvotoData((prev) => ({ ...prev, image: urls[0] || null })); // primera como portada
                         setHasUnsaved(true);
+                        setImageChanged(true);
                       })
                       .catch((err) => {
                         console.error('Error leyendo imágenes:', err);
@@ -604,6 +626,7 @@ return (
                       onClick={() => {
                         setSelectedImages([]);
                         setNewExvotoData((prev) => ({ ...prev, image: null }));
+                        setImageChanged(true);
                       }}
                       className="px-3 py-2 bg-slate-200 text-slate-800 rounded hover:bg-slate-300"
                     >Quitar imágenes</button>

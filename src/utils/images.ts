@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../services/api';
+
 export const PLACEHOLDER_IMAGE_DATA_URL = (() => {
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='200' height='150'>
     <rect width='100%' height='100%' fill='#e5e7eb'/>
@@ -11,6 +13,21 @@ export const PLACEHOLDER_IMAGE_DATA_URL = (() => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 })();
 
+function getApiOrigin(): string {
+  try {
+    if (API_BASE_URL) {
+      const parsed = new URL(API_BASE_URL);
+      return `${parsed.protocol}//${parsed.host}`;
+    }
+  } catch {
+    // Ignorar y usar origin del navegador como respaldo
+  }
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+  return '';
+}
+
 export function getImageSrc(image: any): string {
   try {
     if (!image) return PLACEHOLDER_IMAGE_DATA_URL;
@@ -21,12 +38,23 @@ export function getImageSrc(image: any): string {
       return PLACEHOLDER_IMAGE_DATA_URL;
     }
 
-    // Si es data URL, validar que tenga datos
+    // Data URL completa
     if (trimmed.startsWith('data:')) {
       const commaIndex = trimmed.indexOf(',');
       if (commaIndex === -1) return PLACEHOLDER_IMAGE_DATA_URL;
       const payload = trimmed.slice(commaIndex + 1);
       if (!payload || payload.length < 8) return PLACEHOLDER_IMAGE_DATA_URL; // vacío o inválido
+      return trimmed;
+    }
+
+    // Rutas relativas al API -> completar con el host del API para evitar 404 si el frontend está en otro puerto
+    if (trimmed.startsWith('/api/')) {
+      const origin = getApiOrigin();
+      return origin ? `${origin}${trimmed}` : trimmed;
+    }
+
+    // URLs absolutas
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       return trimmed;
     }
 
@@ -38,4 +66,3 @@ export function getImageSrc(image: any): string {
     return PLACEHOLDER_IMAGE_DATA_URL;
   }
 }
-

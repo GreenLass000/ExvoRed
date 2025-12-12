@@ -1,6 +1,6 @@
 import { Sem, Catalog, Exvoto, Character, Miracle, CatalogSem } from '../types';
 
-const API_BASE_URL = 'http://localhost:3000/api';
+export const API_BASE_URL = 'http://localhost:3000/api';
 
 // Helper function for API calls
 async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {

@@ -508,11 +508,21 @@ export function useExcelKeyboard<T extends Record<string, any>>(
 
     // Find the cell element and scroll it into view
     const cellSelector = `[data-cell="${state.selectedCell.rowIndex}-${state.selectedCell.columnKey}"]`;
-    const cellElement = document.querySelector(cellSelector);
-    
-    if (cellElement) {
+    const cellElement = document.querySelector(cellSelector) as HTMLElement | null;
+    if (!cellElement) return;
+
+    const rect = cellElement.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    const isOutside =
+      rect.top < 0 ||
+      rect.bottom > viewportHeight ||
+      rect.left < 0 ||
+      rect.right > viewportWidth;
+
+    if (isOutside) {
       cellElement.scrollIntoView({
-        behavior: 'smooth',
+        behavior: 'auto',
         block: 'nearest',
         inline: 'nearest'
       });
