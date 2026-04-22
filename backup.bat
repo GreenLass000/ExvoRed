@@ -1,28 +1,41 @@
 @echo off
 REM Backup script for ExvoRed database
 REM Creates a timestamped backup in ../backups directory
+REM Keeps backups from the last 30 days; older ones are deleted
 
 echo Creating database backup...
+
+REM Check database exists before doing anything
+if not exist "api\db\database.db" (
+    echo ERROR: Database file not found at api\db\database.db
+    exit /b 1
+)
 
 REM Create backups directory if it doesn't exist
 if not exist "..\backups" mkdir "..\backups"
 
-REM Generate timestamp (YYYYMMDD_HHMMSS format)
-for /f "tokens=2-4 delims=/ " %%a in ('date /t') do (set mydate=%%c%%a%%b)
-for /f "tokens=1-2 delims=/:" %%a in ('time /t') do (set mytime=%%a%%b)
-set mytime=%mytime: =0%
-set timestamp=%mydate%_%mytime%
+REM Generate timestamp using wmic (locale-independent)
+for /f "skip=1 tokens=1-6 delims=-T:. " %%a in ('wmic os get LocalDateTime /value ^| find "="') do (
+    set dt=%%a%%b%%c_%%d%%e%%f
+)
 
-REM Create backup filename
-set backup_file=..\backups\exvored_backup_%timestamp%.db
+REM Fallback: if wmic failed, use a simpler format
+if not defined dt (
+    set dt=%date:~-4%%date:~3,2%%date:~0,2%_%time:~0,2%%time:~3,2%%time:~6,2%
+    set dt=%dt: =0%
+)
 
-REM Copy database file
-if exist "api\db\database.db" (
-    copy "api\db\database.db" "%backup_file%"
-    echo Backup created successfully: %backup_file%
-) else (
-    echo ERROR: Database file not found at api\db\database.db
+REM Create backup
+set backup_file=..\backups\exvored_backup_%dt%.db
+copy "api\db\database.db" "%backup_file%"
+if errorlevel 1 (
+    echo ERROR: Failed to copy database to %backup_file%
     exit /b 1
 )
+echo Backup created: %backup_file%
+
+REM Delete backups older than 30 days
+echo Cleaning up backups older than 30 days...
+forfiles /p "..\backups" /m "exvored_backup_*.db" /d -30 /c "cmd /c del @path" 2>nul
 
 echo Backup completed!

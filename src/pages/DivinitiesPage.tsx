@@ -7,7 +7,7 @@ import SearchBar from '../components/SearchBar';
 import RichTextEditor from '../components/RichTextEditor';
 import { PlusIcon } from '../components/icons';
 import * as api from '../services/api';
-import { Divinity } from '../types';
+import { Divinity, Sem } from '../types';
 import { useNewShortcut } from '../hooks/useGlobalShortcut';
 
 const getInitialDivinityData = (): Omit<Divinity, 'id'> => ({
@@ -18,14 +18,6 @@ const getInitialDivinityData = (): Omit<Divinity, 'id'> => ({
   representation_image: null,
   comments: null
 });
-
-const columns: ColumnDef<Divinity>[] = [
-  { key: 'name', header: 'Nombre' },
-  { key: 'attributes', header: 'Atributos/Especialidad', type: 'richtext' },
-  { key: 'history', header: 'Historia', type: 'richtext' },
-  { key: 'representation', header: 'Representación', type: 'richtext' },
-  { key: 'comments', header: 'Comentarios', type: 'richtext' }
-];
 
 const DivinitiesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -43,6 +35,9 @@ const DivinitiesPage: React.FC = () => {
   const [newDivinityData, setNewDivinityData] = useState<Omit<Divinity, 'id'>>(getInitialDivinityData());
   const [hasUnsaved, setHasUnsaved] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+  const [allSems, setAllSems] = useState<Sem[]>([]);
+  // Map divinityId → sem names (para columna SEMs)
+  const [divinitySemMap, setDivinitySemMap] = useState<Record<number, string[]>>({});
 
   // Refs y estado para integración SearchBar-ExcelTable
   const excelTableRef = useRef<ExcelTableRef>(null);
@@ -59,19 +54,31 @@ const DivinitiesPage: React.FC = () => {
   const fetchData = useCallback(async (page: number) => {
     setLoading(true);
     try {
-      const response = await api.getDivinities(page, itemsPerPage);
-
+      const [response, semsData, divinitySems] = await Promise.all([
+        api.getDivinities(page, itemsPerPage),
+        allSems.length === 0 ? api.getAllSems() : Promise.resolve(allSems),
+        api.getDivinitySems(),
+      ]);
       setDivinities(response.data);
       setTotalPages(response.pagination.totalPages);
       setTotalRecords(response.pagination.total);
       setCurrentPage(response.pagination.page);
+      if (allSems.length === 0) setAllSems(semsData);
+      // Construir mapa divinityId → [sem names]
+      const semById = Object.fromEntries(semsData.map((s: Sem) => [s.id, s.name || `SEM #${s.id}`]));
+      const dsMap: Record<number, string[]> = {};
+      divinitySems.forEach(ds => {
+        if (!dsMap[ds.divinity_id]) dsMap[ds.divinity_id] = [];
+        if (semById[ds.sem_id]) dsMap[ds.divinity_id].push(semById[ds.sem_id]);
+      });
+      setDivinitySemMap(dsMap);
     } catch (error) {
       console.error('Error fetching divinities:', error);
       showToast('Error al cargar los datos. Por favor, recarga la página.', 'error');
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [showToast, allSems]);
 
   useEffect(() => {
     fetchData(currentPage);
@@ -236,6 +243,24 @@ const DivinitiesPage: React.FC = () => {
     }
   }, [searchResults]);
 
+  // Columnas con SEMs dinámicos
+  const columns: ColumnDef<Divinity>[] = React.useMemo(() => [
+    { key: 'name', header: 'Nombre' },
+    { key: 'attributes', header: 'Atributos/Especialidad', type: 'richtext' },
+    { key: 'history', header: 'Historia', type: 'richtext' },
+    { key: 'representation', header: 'Representación', type: 'richtext' },
+    {
+      key: 'id' as any,
+      header: 'SEMs de culto',
+      readOnly: true,
+      render: (_val, row) => {
+        const names = divinitySemMap[(row as Divinity).id] ?? [];
+        return names.length > 0 ? names.join(', ') : null;
+      }
+    },
+    { key: 'comments', header: 'Comentarios', type: 'richtext' }
+  ], [divinitySemMap]);
+
   if (loading) {
     return <div className="text-center p-8">Cargando datos...</div>;
   }
@@ -331,6 +356,33 @@ const DivinitiesPage: React.FC = () => {
               />
             </div>
           </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Imagen de Representación</label>
+              <div className="flex items-center gap-4 flex-wrap">
+                {newDivinityData.representation_image && (
+                  <img src={newDivinityData.representation_image} alt="Preview" className="h-20 w-20 object-cover rounded border" />
+                )}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      setNewDivinityData(prev => ({ ...prev, representation_image: reader.result as string }));
+                      setHasUnsaved(true);
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                  className="text-sm text-slate-600"
+                />
+                {newDivinityData.representation_image && (
+                  <button type="button" onClick={() => setNewDivinityData(prev => ({ ...prev, representation_image: null }))} className="text-xs text-red-500 hover:underline">Eliminar imagen</button>
+                )}
+              </div>
+            </div>
+
           <div className="flex justify-end pt-6">
             <button type="button" onClick={handleModalClose} className="mr-3 px-4 py-2 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300">Cancelar</button>
             <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">

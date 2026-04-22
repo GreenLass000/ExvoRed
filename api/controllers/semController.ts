@@ -1,8 +1,26 @@
 import { Request, Response } from 'express';
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, desc, sql, or, min, max, count } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { sem } from '../db/schema.js';
+import { sem, exvoto } from '../db/schema.js';
 import type { NewSem } from '../db/schema.js';
+
+// Recalcula numero_exvotos, oldest_exvoto_date y newest_exvoto_date para un SEM dado
+export async function recalculateSemStats(semId: number): Promise<void> {
+  if (!semId || !Number.isFinite(semId)) return;
+  const stats = await db.select({
+    total: count(),
+    oldest: min(exvoto.exvoto_date),
+    newest: max(exvoto.exvoto_date),
+  }).from(exvoto).where(
+    or(eq(exvoto.offering_sem_id, semId), eq(exvoto.conservation_sem_id, semId))
+  );
+  const { total, oldest, newest } = stats[0] ?? { total: 0, oldest: null, newest: null };
+  await db.update(sem).set({
+    numero_exvotos: total,
+    oldest_exvoto_date: oldest ?? null,
+    newest_exvoto_date: newest ?? null,
+  }).where(eq(sem.id, semId));
+}
 
 export const semController = {
   // GET /api/sems - Obtener todos los sems con paginación

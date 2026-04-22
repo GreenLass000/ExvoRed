@@ -13,6 +13,7 @@ router.delete('/:id', exvotoController.delete);
 // Imágenes adicionales
 router.post('/:id/images', exvotoController.addImages);
 router.get('/:id/images', exvotoController.getImages);
+router.put('/:id/images/:imageId', exvotoController.updateImage);
 router.delete('/:id/images/:imageId', exvotoController.deleteImage);
 
 export default router;

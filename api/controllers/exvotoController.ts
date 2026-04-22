@@ -3,6 +3,13 @@ import { and, eq, desc, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { exvoto, exvotoImage } from '../db/schema.js';
 import type { NewExvoto } from '../db/schema.js';
+import { recalculateSemStats } from './semController.js';
+
+// Recalcula stats para todos los SEMs afectados (filtrando nulos y duplicados)
+async function recalculateAffectedSems(...semIds: (number | null | undefined)[]): Promise<void> {
+  const unique = [...new Set(semIds.filter((id): id is number => !!id && Number.isFinite(id)))];
+  await Promise.all(unique.map(recalculateSemStats));
+}
 
 // Helper: detectar mime por cabecera
 function detectMimeType(buffer: Buffer): string {
@@ -166,6 +173,8 @@ export const exvotoController = {
       const row: any = result[0];
       row.image = row.image ? buildImageUrl(row.id) : null;
       res.status(201).json(row);
+      // Recalcular stats de los SEMs afectados (fire-and-forget)
+      recalculateAffectedSems(row.offering_sem_id, row.conservation_sem_id).catch(console.error);
     } catch (error) {
       console.error('Error creating exvoto:', error);
       res.status(500).json({ error: 'Failed to create exvoto' });
@@ -178,6 +187,14 @@ export const exvotoController = {
       const id = parseInt(req.params.id);
       const exvotoData = req.body as any as Partial<NewExvoto>;
       const now = new Date().toISOString();
+
+      // Guardar SEMs anteriores para recalcular tras el update
+      const previous = await db.select({
+        offering_sem_id: exvoto.offering_sem_id,
+        conservation_sem_id: exvoto.conservation_sem_id,
+      }).from(exvoto).where(eq(exvoto.id, id)).limit(1);
+      const prevOfferingSem = previous[0]?.offering_sem_id;
+      const prevConservationSem = previous[0]?.conservation_sem_id;
 
       const payload: any = { ...exvotoData, updated_at: now };
       const incomingImage = (exvotoData as any).image;
@@ -224,6 +241,11 @@ export const exvotoController = {
       const row: any = result[0];
       row.image = row.image ? buildImageUrl(row.id) : null;
       res.json(row);
+      // Recalcular SEMs anteriores y nuevos (puede haber cambiado el SEM)
+      recalculateAffectedSems(
+        prevOfferingSem, prevConservationSem,
+        row.offering_sem_id, row.conservation_sem_id
+      ).catch(console.error);
     } catch (error) {
       console.error('Error updating exvoto:', error);
       res.status(500).json({ error: 'Failed to update exvoto' });
@@ -234,16 +256,29 @@ export const exvotoController = {
   async delete(req: Request, res: Response) {
     try {
       const id = parseInt(req.params.id);
-      
+
+      // Guardar SEMs antes de eliminar para recalcular después
+      const previous = await db.select({
+        offering_sem_id: exvoto.offering_sem_id,
+        conservation_sem_id: exvoto.conservation_sem_id,
+      }).from(exvoto).where(eq(exvoto.id, id)).limit(1);
+
       const result = await db.delete(exvoto)
         .where(eq(exvoto.id, id))
         .returning();
-      
+
       if (result.length === 0) {
         return res.status(404).json({ error: 'Exvoto not found' });
       }
-      
+
       res.json({ message: 'Exvoto deleted successfully' });
+      // Recalcular SEMs afectados tras el borrado
+      if (previous[0]) {
+        recalculateAffectedSems(
+          previous[0].offering_sem_id,
+          previous[0].conservation_sem_id
+        ).catch(console.error);
+      }
     } catch (error) {
       console.error('Error deleting exvoto:', error);
       res.status(500).json({ error: 'Failed to delete exvoto' });
@@ -297,6 +332,27 @@ export const exvotoController = {
     } catch (error) {
       console.error('Error fetching exvoto images:', error);
       res.status(500).json({ error: 'Failed to fetch images' });
+    }
+  },
+
+  // PUT /api/exvotos/:id/images/:imageId - Actualizar caption de una imagen
+  async updateImage(req: Request, res: Response) {
+    try {
+      const id = parseInt(req.params.id);
+      const imageId = parseInt(req.params.imageId);
+      const { caption } = req.body as { caption?: string | null };
+      const now = new Date().toISOString();
+      const result = await db.update(exvotoImage)
+        .set({ caption: caption ?? null, updated_at: now })
+        .where(and(eq(exvotoImage.id, imageId), eq(exvotoImage.exvoto_id, id)))
+        .returning();
+      if (result.length === 0) return res.status(404).json({ error: 'Image not found' });
+      const row: any = result[0];
+      row.image = bufferToDataUrl(row.image);
+      res.json(row);
+    } catch (error) {
+      console.error('Error updating exvoto image:', error);
+      res.status(500).json({ error: 'Failed to update image' });
     }
   },
 

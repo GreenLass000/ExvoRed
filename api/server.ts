@@ -21,7 +21,11 @@ app.use('/api/sems', semRoutes);
 app.use('/api/catalogs', catalogRoutes);
 app.use('/api/catalog-sems', catalogSemRoutes);
 import divinityRoutes from './routes/divinityRoutes.js';
+import divinitySemRoutes from './routes/divinitySemRoutes.js';
+import searchRoutes from './routes/searchRoutes.js';
 app.use('/api/divinities', divinityRoutes);
+app.use('/api/divinity-sems', divinitySemRoutes);
+app.use('/api/search', searchRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

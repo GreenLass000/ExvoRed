@@ -1,7 +1,7 @@
 @echo off
 REM Update script for ExvoRed project
 REM 1. Creates database backup
-REM 2. Pulls latest changes from GitHub
+REM 2. Pulls latest changes from GitHub (remote always wins on conflict)
 REM 3. Updates dependencies
 REM 4. Applies database migrations
 
@@ -10,7 +10,7 @@ echo ExvoRed Update Script
 echo ========================================
 echo.
 
-REM Step 1: Create database backup
+REM Step 1: Create database backup (always, before any changes)
 echo [Step 1/4] Creating database backup...
 call backup.bat
 if errorlevel 1 (
@@ -20,11 +20,19 @@ if errorlevel 1 (
 )
 echo.
 
-REM Step 2: Pull latest changes from GitHub
-echo [Step 2/4] Pulling latest changes from GitHub...
-git pull origin main
+REM Step 2: Pull latest changes from GitHub (remote always wins)
+echo [Step 2/4] Fetching latest changes from GitHub...
+git fetch origin main
 if errorlevel 1 (
-    echo ERROR: Git pull failed. Please resolve conflicts manually.
+    echo ERROR: Git fetch failed. Check your internet connection or repository access.
+    pause
+    exit /b 1
+)
+
+echo Applying remote changes (remote takes priority over local changes)...
+git reset --hard origin/main
+if errorlevel 1 (
+    echo ERROR: Could not apply remote changes.
     pause
     exit /b 1
 )

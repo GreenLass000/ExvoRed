@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import GlobalSearch from './GlobalSearch';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -22,22 +23,25 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     return (
         <div className="min-h-screen bg-slate-100">
             <header className="bg-slate-800 text-white shadow-md sticky top-0 z-40">
-                <nav className="container mx-auto px-6 flex items-center justify-between h-16">
+                <nav className="container mx-auto px-6 flex items-center justify-between h-16 gap-4">
                     <div className="flex-shrink-0">
                          <h1 className="text-xl font-bold">ExvoRed</h1>
                     </div>
-                    <div className="flex items-baseline space-x-4">
+                    <div className="flex items-baseline space-x-4 flex-1 min-w-0">
                         {navItems.map(item => (
                             <NavLink
                                 key={item.path}
                                 to={item.path}
-                                className={({ isActive }) => 
-                                    `px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive ? activeLinkClass : inactiveLinkClass}`
+                                className={({ isActive }) =>
+                                    `px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${isActive ? activeLinkClass : inactiveLinkClass}`
                                 }
                             >
                                 {item.label}
                             </NavLink>
                         ))}
+                    </div>
+                    <div className="flex-shrink-0">
+                        <GlobalSearch />
                     </div>
                 </nav>
             </header>

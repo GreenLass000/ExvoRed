@@ -81,16 +81,30 @@ The database is centered around **exvotos** with supporting entities. All relati
 
 /src/
   /components/
-    DataTable.tsx    # Main reusable data table with Excel-like features
+    DataTable.tsx    # Legacy data table component
     SearchBar.tsx    # Advanced search component with highlighting and navigation
     Modal.tsx        # Reusable modal component
     Layout.tsx       # App layout with navigation
     EpochSelector.tsx # 25-year epoch interval selector (13th-21st centuries)
+    RichTextEditor.tsx # Rich text editor (used in Divinities)
+    TagSelect.tsx    # Tag selection component
+    ErrorBoundary.tsx # React error boundary
+    icons.tsx        # Custom icon components
+    /excel/          # Excel-like table components
+      ExcelTable.tsx        # Main Excel-like table
+      CellModal.tsx         # Cell content modal
+      EditCellModal.tsx     # Cell editing modal
+      ColumnHeader.tsx      # Column header with sorting/options
+      ColumnVisibilityPanel.tsx # Show/hide columns panel
+      DraggableColumn.tsx   # Drag-to-reorder column
+      HorizontalScrollBar.tsx # Custom horizontal scroll
+      ResizableColumn.tsx   # Resizable column handle
   /pages/           # Main application pages (lazy loaded)
     ExvotoPage.tsx, ExvotoDetailPage.tsx
     SemPage.tsx, SemDetailPage.tsx
     CatalogPage.tsx, CatalogDetailPage.tsx
-    DivinitiesPage.tsx, CharactersPage.tsx, MiraclesPage.tsx
+    DivinitiesPage.tsx, DivinityDetailPage.tsx
+    CharactersPage.tsx, MiraclesPage.tsx
     KeybindsPage.tsx # Keyboard shortcuts documentation
   /services/
     api.ts          # API client functions for backend communication
@@ -102,6 +116,9 @@ The database is centered around **exvotos** with supporting entities. All relati
     useExcelMode.ts  # Excel-like navigation and editing
     useExcelKeyboard.ts # Keyboard navigation
     useGlobalShortcut.ts # Global keyboard shortcuts
+    usePageConfig.ts # Per-page configuration persistence (filters, column state)
+  /lib/
+    utils.ts        # General utility functions (clsx/tailwind-merge helpers)
   types.ts          # TypeScript type definitions (mirrors backend types)
   App.tsx           # React Router setup with lazy loading
 ```
@@ -136,9 +153,9 @@ The database is centered around **exvotos** with supporting entities. All relati
 - Prev/Next navigation through results
 - Yellow highlighting of search terms in tables
 
-**3. Keyboard Shortcuts (see `KeybindsPage.tsx`):**
+**3. Keyboard Shortcuts (see `KeybindsPage.tsx` at route `/atajos`):**
 - `e` - Edit field
-- `i` - Inspect (navigate to detail/related records)
+- `i` - Inspect (navigate to detail/related records, opens in new tab)
 - `Shift+E` - Edit entire row (from detail pages)
 - `p` - Print (detail pages only)
 
@@ -170,6 +187,7 @@ The database is centered around **exvotos** with supporting entities. All relati
 - Backend types are inferred from Drizzle schema using `$inferSelect` and `$inferInsert`
 - Frontend types in `src/types.ts` should match backend structure
 - All dates and nullable fields use `string | null` or `number | null`
+- **Known discrepancy:** `Catalog` interface in `src/types.ts` has `related_places` and `location` fields that do NOT exist in the schema. Schema fields `publication_place`, `location_description`, and `numero_exvotos` are missing from the frontend type. This is intentional pending a catalog fields refactor (see TODO.md - Catálogos section).
 
 ### Styling
 - Tailwind CSS for all styling
@@ -185,33 +203,64 @@ The database is centered around **exvotos** with supporting entities. All relati
 
 ## Active Development Areas
 
-Based on `TODO.md` and `PROJECT_STATUS.md`:
+Based on `TODO.md`:
 
 **Completed:**
-- ✅ Advanced search system across all pages
+- ✅ Advanced search system (yellow highlight, prev/next navigation)
 - ✅ Divinities table and management page
 - ✅ Excel-mode navigation (arrow keys, column operations)
 - ✅ Epoch selector with 25-year intervals
 - ✅ Keyboard shortcuts (e, i, Shift+E, p)
+- ✅ Row numbers estilo Excel
+- ✅ Double-click inline cell editing
+- ✅ Add row button (+) at end of table
+- ✅ Duplicate row button
+- ✅ Copy cell text
+- ✅ Default sort by last modified
+- ✅ Per-page config persistence (filters, column state)
+- ✅ Modal only closes with X/Cancel (not outside click)
+- ✅ Rich text editor in modals for long-text fields
+- ✅ Inspect opens in new tab
 
-**High Priority:**
+**Pending (Formularios / UI):**
 - Switch date inputs from `type="date"` to manual text entry
-- Remove "Actions" column from tables (use inline editing in detail pages)
-- Improve detail pages with inline editing (eliminate separate edit modals)
+- Fix tab order in "new record" forms
+- Add SEM search dropdown in new exvoto form
+- Create miracle, character, divinity from new exvoto form
+- Add "ambos/desconocido" gender options; remove "otro"
+- Inline editing from inspect view (instead of opening modal)
+- In table view mode, show display text instead of IDs
 
-**Medium Priority:**
-- Column sorting (asc/desc) in table headers
-- CSV/Excel export functionality
-- Cell text overflow handling (truncate + modal on Enter)
-- Cell color customization
-- Advanced filtering (by province, epoch, etc.)
+**Pending (Exvotos):**
+- Add `referencias` column to exvoto
+- Link `virgen_o_santo` to divinities table (dropdown)
+- Move `lugar_origen` field between social status and miracle
+- Add new exvoto from SEM detail page
+- Fix exvoto count and date range auto-calculation in SEM
 
-**Long Term:**
-- Rich text editor for transcriptions
-- Multiple image management UI
-- Mini-search in dropdowns
-- Linked catalog references
-- "Desaparecido" (disappeared) option for SEM conservation
+**Pending (Catálogos):**
+- Remove `lugar_publicacion` field
+- Make `lugares_relacionados` a plain text field
+- Rename `descripcion_ubicacion` → `descripcion`
+- Remove `numero_total_exvotos` field
+- Link related SEMs
+
+**Pending (Divinidades):**
+- Add SEMs column (many divinities ↔ many SEMs)
+- Add image support
+- Fix inspect navigation
+- Link SEMs and divinities
+
+**Pending (Imágenes):**
+- Open image in new tab on "ampliar"
+- Re-download image option
+- Mouse-wheel zoom
+- Navigate between multiple images when enlarged
+- Add caption/source note per image
+- General image upload functionality
+
+**Pending (Búsqueda):**
+- Global cross-table search (search a word and see all tables/columns where it appears)
 
 ## Running the Full Stack
 

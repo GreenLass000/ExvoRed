@@ -101,6 +101,11 @@ const ExcelTableInner = <T extends Record<string, any>>({
   const [status, setStatus] = useState<{ rowIndex: number, message: string, type: 'info' | 'error' } | null>(null);
   const inputRef = useRef<HTMLInputElement | HTMLSelectElement>(null);
 
+  // Row density
+  type RowDensity = 'compact' | 'normal' | 'spacious';
+  const [rowDensity, setRowDensity] = useState<RowDensity>('normal');
+  const rowHeightClass: Record<RowDensity, string> = { compact: 'h-7', normal: 'h-10', spacious: 'h-14' };
+
   // Copy/Paste clipboard state
   const [copiedValue, setCopiedValue] = useState<{ value: any; columnKey: string; rowIndex: number } | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
@@ -597,6 +602,23 @@ const ExcelTableInner = <T extends Record<string, any>>({
           >
             Resetear
           </button>
+
+          {/* Density selector */}
+          <div className="flex items-center gap-1 border border-gray-200 rounded-md overflow-hidden">
+            {(['compact', 'normal', 'spacious'] as RowDensity[]).map(d => (
+              <button
+                key={d}
+                onClick={() => setRowDensity(d)}
+                className={cn(
+                  "px-2 py-1 text-xs transition-colors",
+                  rowDensity === d ? "bg-blue-100 text-blue-700 font-medium" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                )}
+                title={d === 'compact' ? 'Compacto' : d === 'normal' ? 'Normal' : 'Espacioso'}
+              >
+                {d === 'compact' ? '▤' : d === 'normal' ? '▦' : '▣'}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Info */}
@@ -699,7 +721,7 @@ const ExcelTableInner = <T extends Record<string, any>>({
                         // Diferentes estilos si está editando o no
                         isEditingThisCell
                           ? "min-h-[80px] items-start overflow-visible whitespace-normal break-words"
-                          : "overflow-hidden text-ellipsis whitespace-nowrap h-10 items-center",
+                          : `overflow-hidden text-ellipsis whitespace-nowrap ${rowHeightClass[rowDensity]} items-center`,
                         "flex flex-shrink-0",
                         // Special styling for foreign key cells
                         (column.key.includes('sem_id') || column.key.includes('catalog_id')) &&
@@ -790,7 +812,7 @@ const ExcelTableInner = <T extends Record<string, any>>({
                 {excelState.visibleColumns.map((column) => (
                   <div
                     key={column.key}
-                    className="px-3 py-2 text-sm text-gray-400 cursor-pointer bg-white overflow-hidden text-ellipsis whitespace-nowrap h-10 flex items-center flex-shrink-0 border-r border-gray-200 last:border-r-0"
+                    className={`px-3 py-2 text-sm text-gray-400 cursor-pointer bg-white overflow-hidden text-ellipsis whitespace-nowrap ${rowHeightClass[rowDensity]} flex items-center flex-shrink-0 border-r border-gray-200 last:border-r-0`}
                     style={{
                       width: `${column.width}px`,
                       minWidth: `${column.width}px`,

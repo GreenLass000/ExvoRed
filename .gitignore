@@ -127,5 +127,3 @@ public/uploads/
 # Local development files
 .local-config.json
 config.local.json
-
-package-lock.json

@@ -144,6 +144,13 @@ export const getExvotoImages = (exvotoId: number): Promise<ExvotoImage[]> => {
     return apiCall<ExvotoImage[]>(`/exvotos/${exvotoId}/images`);
 };
 
+export const updateExvotoImage = (exvotoId: number, imageId: number, data: { caption?: string | null }): Promise<ExvotoImage> => {
+    return apiCall<ExvotoImage>(`/exvotos/${exvotoId}/images/${imageId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    });
+};
+
 export const deleteExvotoImage = (exvotoId: number, imageId: number): Promise<{ message: string }> => {
     return apiCall<{ message: string }>(`/exvotos/${exvotoId}/images/${imageId}`, {
         method: 'DELETE',
@@ -255,6 +262,44 @@ export const deleteCatalogSem = (catalogId: number, semId: number): Promise<{ me
     return apiCall<{ message: string }>(`/catalog-sems/${catalogId}/${semId}`, {
         method: 'DELETE',
     });
+};
+
+// --- DIVINITY SEM API ---
+export interface DivinitySem { divinity_id: number; sem_id: number; }
+
+export const getDivinitySems = (): Promise<DivinitySem[]> => {
+    return apiCall<DivinitySem[]>('/divinity-sems');
+};
+
+export const getDivinitySemsByDivinityId = (divinityId: number): Promise<DivinitySem[]> => {
+    return apiCall<DivinitySem[]>(`/divinity-sems/divinity/${divinityId}`);
+};
+
+export const createDivinitySem = (divinityId: number, semId: number): Promise<DivinitySem> => {
+    return apiCall<DivinitySem>('/divinity-sems', {
+        method: 'POST',
+        body: JSON.stringify({ divinity_id: divinityId, sem_id: semId }),
+    });
+};
+
+export const deleteDivinitySem = (divinityId: number, semId: number): Promise<{ message: string }> => {
+    return apiCall<{ message: string }>(`/divinity-sems/${divinityId}/${semId}`, {
+        method: 'DELETE',
+    });
+};
+
+// --- GLOBAL SEARCH API ---
+export interface SearchResult {
+    table: string;
+    id: number;
+    displayText: string;
+    matchedColumn: string;
+    matchedValue: string;
+}
+
+export const globalSearch = (query: string): Promise<SearchResult[]> => {
+    if (!query || query.trim().length < 2) return Promise.resolve([]);
+    return apiCall<SearchResult[]>(`/search?q=${encodeURIComponent(query.trim())}`);
 };
 
 // --- UTILITY FUNCTIONS ---

@@ -12,7 +12,7 @@ import TagSelect from '../components/TagSelect';
 import SearchBar from '../components/SearchBar';
 import EpochSelector from '../components/EpochSelector';
 import RichTextEditor from '../components/RichTextEditor';
-import { Exvoto, Sem, Character, Miracle } from '../types';
+import { Exvoto, Sem, Character, Miracle, Divinity } from '../types';
 import { calculateEpochFromDate } from '../utils/epochUtils';
 import * as api from '../services/api';
 import { useNewShortcut } from '../hooks/useGlobalShortcut';
@@ -56,6 +56,7 @@ const ExvotoPage: React.FC = () => {
   const [sems, setSems] = useState<Sem[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [miracles, setMiracles] = useState<Miracle[]>([]);
+  const [divinities, setDivinities] = useState<Divinity[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -69,9 +70,15 @@ const ExvotoPage: React.FC = () => {
   const [imageChanged, setImageChanged] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
-  // Modal rápido para crear SEM desde el formulario de Exvoto
+  // Modales rápidos para crear entidades desde el formulario de Exvoto
   const [isSemModalOpen, setIsSemModalOpen] = useState(false);
   const [semFieldTarget, setSemFieldTarget] = useState<'offering_sem_id' | 'conservation_sem_id' | null>(null);
+  const [isQuickMiracleOpen, setIsQuickMiracleOpen] = useState(false);
+  const [quickMiracleName, setQuickMiracleName] = useState('');
+  const [isQuickCharacterOpen, setIsQuickCharacterOpen] = useState(false);
+  const [quickCharacterName, setQuickCharacterName] = useState('');
+  const [isQuickDivinityOpen, setIsQuickDivinityOpen] = useState(false);
+  const [quickDivinityName, setQuickDivinityName] = useState('');
   const getInitialQuickSem = (): Omit<Sem, 'id'> => ({
     name: '',
     region: '',
@@ -113,14 +120,16 @@ const ExvotoPage: React.FC = () => {
     try {
       // Cargar maestros una sola vez
       if (!mastersLoaded.current) {
-        const [semData, characterData, miracleData] = await Promise.all([
+        const [semData, characterData, miracleData, divinityData] = await Promise.all([
           api.getAllSems(),
           api.getCharacters(),
-          api.getMiracles()
+          api.getMiracles(),
+          api.getAllDivinities()
         ]);
         setSems(semData);
         setCharacters(characterData);
         setMiracles(miracleData);
+        setDivinities(divinityData);
         mastersLoaded.current = true;
       }
 
@@ -149,24 +158,35 @@ const ExvotoPage: React.FC = () => {
     }
   };
 
-  // Handle URL parameters for edit mode
+  // Handle URL parameters for edit mode and new-from-sem
   useEffect(() => {
     const editId = searchParams.get('edit');
+    const isNew = searchParams.get('new') === '1';
+    const offeringSemId = searchParams.get('offering_sem_id');
+
     if (editId && exvotos.length > 0) {
       const exvotoId = parseInt(editId, 10);
       const exvoto = exvotos.find(e => e.id === exvotoId);
       if (exvoto) {
-        // Open edit modal
         const { id: _, ...rest } = exvoto;
         setEditingExvoto(exvoto);
         setNewExvotoData({ ...rest });
         setIsModalOpen(true);
-        
-        // Clean URL parameter
         setSearchParams({});
       }
+    } else if (isNew && !loading) {
+      // Abrir modal de nuevo exvoto, pre-rellenando offering_sem_id si se especifica
+      const initial = getInitialExvotoData();
+      if (offeringSemId) {
+        const semId = parseInt(offeringSemId, 10);
+        if (Number.isFinite(semId)) initial.offering_sem_id = semId;
+      }
+      setEditingExvoto(null);
+      setNewExvotoData(initial);
+      setIsModalOpen(true);
+      setSearchParams({});
     }
-  }, [searchParams, exvotos, setSearchParams]);
+  }, [searchParams, exvotos, setSearchParams, loading]);
 
   const semNameMap = useMemo(() => {
     return sems.reduce((acc, sem) => {
@@ -414,7 +434,7 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
     }
   }, [searchResults]);
 
-  const renderFormField = useCallback((label: string, name: keyof typeof newExvotoData, type = 'text', options: { value: any, label: string }[] = []) => {
+  const renderFormField = useCallback((label: string, name: keyof typeof newExvotoData, type = 'text', options: { value: any, label: string }[] = [], tabIndex?: number) => {
     const value = newExvotoData[name] ?? '';
     const commonClass = "mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm";
 
@@ -441,7 +461,7 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
         <div key={name}>
           <label htmlFor={name} className="block text-sm font-medium text-slate-700">{label}</label>
           <div className="flex items-center gap-2">
-            <select id={name} name={name} value={value ?? ''} onChange={handleFormChange} className={commonClass}>
+            <select id={name} name={name} value={value ?? ''} onChange={handleFormChange} className={commonClass} tabIndex={tabIndex}>
               <option value="">-- Seleccionar --</option>
               {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
             </select>
@@ -496,7 +516,7 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
     return (
       <div key={name}>
         <label htmlFor={name} className="block text-sm font-medium text-slate-700">{label}</label>
-        <input type={type} id={name} name={name} value={value ?? ''} onChange={handleFormChange} className={commonClass} />
+        <input type={type} id={name} name={name} value={value ?? ''} onChange={handleFormChange} className={commonClass} tabIndex={tabIndex} />
       </div>
     );
   }, [newExvotoData, characters]);
@@ -537,33 +557,74 @@ return (
       >
         <form onSubmit={handleFormSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {renderFormField('ID Interno', 'internal_id')}
-            {renderFormField('SEM Ofrenda', 'offering_sem_id', 'select', sems.map(s => ({ value: s.id, label: s.name || `SEM #${s.id}` })))}
-            {renderFormField('Lugar Origen Devoto/a', 'lugar_origen')}
-            {renderFormField('SEM Conservación', 'conservation_sem_id', 'select', sems.map(s => ({ value: s.id, label: s.name || `SEM #${s.id}` })))}
-            {renderFormField('Provincia', 'province')}
-            {renderFormField('Divinidad', 'virgin_or_saint')}
-            {renderFormField('Fecha Exvoto', 'exvoto_date', 'text')}
-            {renderFormField('Época (25 años)', 'epoch', 'epoch')}
-            {renderFormField('Nombre Beneficiado', 'benefited_name')}
-            {renderFormField('Nombre Oferente', 'offerer_name')}
+            {renderFormField('ID Interno', 'internal_id', 'text', [], 1)}
+            {renderFormField('SEM Ofrenda', 'offering_sem_id', 'select', sems.map(s => ({ value: s.id, label: s.name || `SEM #${s.id}` })), 2)}
+            {renderFormField('Lugar Origen Devoto/a', 'lugar_origen', 'text', [], 3)}
+            {renderFormField('SEM Conservación', 'conservation_sem_id', 'select', sems.map(s => ({ value: s.id, label: s.name || `SEM #${s.id}` })), 4)}
+            {renderFormField('Provincia', 'province', 'text', [], 5)}
+            {/* Divinidad con botón + */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Divinidad</label>
+              <div className="flex items-center gap-2">
+                <select name="virgin_or_saint" value={newExvotoData.virgin_or_saint ?? ''} onChange={handleFormChange} tabIndex={6}
+                  className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                  <option value="">-- Seleccionar --</option>
+                  {divinities.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                </select>
+                <button type="button" tabIndex={-1} onClick={() => { setQuickDivinityName(''); setIsQuickDivinityOpen(true); }}
+                  className="mt-1 inline-flex items-center justify-center h-10 w-10 rounded-md border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500" title="Nueva Divinidad">
+                  <PlusIcon className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            {renderFormField('Fecha Exvoto', 'exvoto_date', 'text', [], 7)}
+            {renderFormField('Época (25 años)', 'epoch', 'epoch', [], 8)}
+            {renderFormField('Nombre Beneficiado', 'benefited_name', 'text', [], 9)}
+            {renderFormField('Nombre Oferente', 'offerer_name', 'text', [], 10)}
             {renderFormField('Género Oferente', 'offerer_gender', 'select', [
               { value: 'Masculino', label: 'Masculino' },
               { value: 'Femenino', label: 'Femenino' },
               { value: 'Ambos', label: 'Ambos' },
               { value: 'Desconocido', label: 'Desconocido' }
-            ])}
-            {renderFormField('Relación Oferente', 'offerer_relation')}
-            {renderFormField('Personajes', 'characters', 'tagselect')}
-            {renderFormField('Profesión', 'profession')}
-            {renderFormField('Subalternidad', 'social_status')}
-            {renderFormField('Milagro', 'miracle', 'select', miracles.map(m => ({ value: m.name, label: m.name })))}
-            {renderFormField('Lugar del Milagro', 'miracle_place')}
-            {renderFormField('Soporte Material', 'material')}
-            {renderFormField('Dimensiones', 'dimensions')}
-            {renderFormField('Uso Capitales', 'text_case')}
+            ], 11)}
+            {renderFormField('Relación Oferente', 'offerer_relation', 'text', [], 12)}
+            {/* Personajes con botón + */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Personajes</label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <TagSelect name="characters" value={String(newExvotoData.characters ?? '')} onChange={handleFormChange}
+                    options={characters} placeholder="Seleccionar personajes..." className="mt-1" />
+                </div>
+                <button type="button" tabIndex={-1} onClick={() => { setQuickCharacterName(''); setIsQuickCharacterOpen(true); }}
+                  className="mt-1 inline-flex items-center justify-center h-10 w-10 rounded-md border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500" title="Nuevo Personaje">
+                  <PlusIcon className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            {renderFormField('Profesión', 'profession', 'text', [], 14)}
+            {renderFormField('Subalternidad', 'social_status', 'text', [], 15)}
+            {/* Milagro con botón + */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Milagro</label>
+              <div className="flex items-center gap-2">
+                <select name="miracle" value={newExvotoData.miracle ?? ''} onChange={handleFormChange} tabIndex={16}
+                  className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                  <option value="">-- Seleccionar --</option>
+                  {miracles.map(m => <option key={m.id} value={m.name}>{m.name}</option>)}
+                </select>
+                <button type="button" tabIndex={-1} onClick={() => { setQuickMiracleName(''); setIsQuickMiracleOpen(true); }}
+                  className="mt-1 inline-flex items-center justify-center h-10 w-10 rounded-md border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500" title="Nuevo Milagro">
+                  <PlusIcon className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            {renderFormField('Lugar del Milagro', 'miracle_place', 'text', [], 17)}
+            {renderFormField('Soporte Material', 'material', 'text', [], 18)}
+            {renderFormField('Dimensiones', 'dimensions', 'text', [], 19)}
+            {renderFormField('Uso Capitales', 'text_case', 'text', [], 20)}
             <div className="md:col-span-2 lg:col-span-3">{renderFormField('Competencia Gráfica (Forma de Texto)', 'text_form', 'textarea')}</div>
-            {renderFormField('Estado de Conservación', 'conservation_status')}
+            {renderFormField('Estado de Conservación', 'conservation_status', 'text', [], 21)}
             <div className="md:col-span-2 lg:col-span-3">{renderFormField('Tipo de Escritura', 'writing_type', 'textarea')}</div>
             <div className="md:col-span-2 lg:col-span-3">{renderFormField('Competencia Lingüística', 'linguistic_competence', 'textarea')}</div>
             <div className="md:col-span-2 lg:col-span-3">{renderFormField('Referencias', 'references', 'textarea')}</div>
@@ -732,6 +793,82 @@ return (
         </form>
       </Modal>
 
+      {/* Modal rápido: crear Milagro */}
+      <Modal isOpen={isQuickMiracleOpen} onClose={() => setIsQuickMiracleOpen(false)} title="Nuevo Milagro">
+        <form onSubmit={async e => {
+          e.preventDefault();
+          if (!quickMiracleName.trim()) return;
+          try {
+            const created = await api.createMiracle(quickMiracleName.trim());
+            setMiracles(prev => [...prev, created]);
+            setNewExvotoData(prev => ({ ...prev, miracle: created.name }));
+            setIsQuickMiracleOpen(false);
+            setQuickMiracleName('');
+            showToast('Milagro creado correctamente', 'success');
+          } catch (err) { showToast('Error al crear el milagro', 'error'); }
+        }}>
+          <label className="block text-sm font-medium text-slate-700">Nombre del milagro</label>
+          <input autoFocus value={quickMiracleName} onChange={e => setQuickMiracleName(e.target.value)}
+            className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md sm:text-sm focus:outline-none focus:ring-blue-500" required />
+          <div className="flex justify-end pt-4 gap-2">
+            <button type="button" onClick={() => setIsQuickMiracleOpen(false)} className="px-4 py-2 bg-slate-200 rounded-lg">Cancelar</button>
+            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg">Guardar</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal rápido: crear Personaje */}
+      <Modal isOpen={isQuickCharacterOpen} onClose={() => setIsQuickCharacterOpen(false)} title="Nuevo Personaje">
+        <form onSubmit={async e => {
+          e.preventDefault();
+          if (!quickCharacterName.trim()) return;
+          try {
+            const created = await api.createCharacter(quickCharacterName.trim());
+            setCharacters(prev => [...prev, created]);
+            // Añadir a la selección actual de personajes (comma-separated)
+            setNewExvotoData(prev => {
+              const existing = prev.characters ? prev.characters.split(',').map(s => s.trim()).filter(Boolean) : [];
+              return { ...prev, characters: [...existing, created.name].join(', ') };
+            });
+            setIsQuickCharacterOpen(false);
+            setQuickCharacterName('');
+            showToast('Personaje creado correctamente', 'success');
+          } catch (err) { showToast('Error al crear el personaje', 'error'); }
+        }}>
+          <label className="block text-sm font-medium text-slate-700">Nombre del personaje</label>
+          <input autoFocus value={quickCharacterName} onChange={e => setQuickCharacterName(e.target.value)}
+            className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md sm:text-sm focus:outline-none focus:ring-blue-500" required />
+          <div className="flex justify-end pt-4 gap-2">
+            <button type="button" onClick={() => setIsQuickCharacterOpen(false)} className="px-4 py-2 bg-slate-200 rounded-lg">Cancelar</button>
+            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg">Guardar</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal rápido: crear Divinidad */}
+      <Modal isOpen={isQuickDivinityOpen} onClose={() => setIsQuickDivinityOpen(false)} title="Nueva Divinidad">
+        <form onSubmit={async e => {
+          e.preventDefault();
+          if (!quickDivinityName.trim()) return;
+          try {
+            const created = await api.createDivinity({ name: quickDivinityName.trim() });
+            setDivinities(prev => [...prev, created]);
+            setNewExvotoData(prev => ({ ...prev, virgin_or_saint: created.name }));
+            setIsQuickDivinityOpen(false);
+            setQuickDivinityName('');
+            showToast('Divinidad creada correctamente', 'success');
+          } catch (err) { showToast('Error al crear la divinidad', 'error'); }
+        }}>
+          <label className="block text-sm font-medium text-slate-700">Nombre de la divinidad</label>
+          <input autoFocus value={quickDivinityName} onChange={e => setQuickDivinityName(e.target.value)}
+            className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md sm:text-sm focus:outline-none focus:ring-blue-500" required />
+          <div className="flex justify-end pt-4 gap-2">
+            <button type="button" onClick={() => setIsQuickDivinityOpen(false)} className="px-4 py-2 bg-slate-200 rounded-lg">Cancelar</button>
+            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg">Guardar</button>
+          </div>
+        </form>
+      </Modal>
+
       <ExcelTable<Exvoto>
         ref={excelTableRef}
         data={filteredExvotos.length > 0 || searchQuery ? filteredExvotos : exvotos}
@@ -777,7 +914,7 @@ return (
             window.open(`/catalog/${id}`, '_blank');
           }
         }}
-        blockNavigation={isModalOpen || isSemModalOpen}
+        blockNavigation={isModalOpen || isSemModalOpen || isQuickMiracleOpen || isQuickCharacterOpen || isQuickDivinityOpen}
         idField="id"
         enableKeyboardNavigation={true}
         onRowUpdate={handleUpdate}
