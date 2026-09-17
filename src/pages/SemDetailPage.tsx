@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Sem } from '../types';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { Exvoto, Sem } from '../types';
 import * as api from '../services/api';
 import RichTextEditor from '../components/RichTextEditor';
+import { isEditableTarget } from '../utils/keyboard';
 
 const SemDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const isTemporaryRecord = searchParams.get('new') === '1';
+    const returnTo = searchParams.get('returnTo') || '/sems';
     const [sem, setSem] = useState<Sem | null>(null);
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
@@ -36,7 +40,35 @@ const SemDetailPage: React.FC = () => {
         }
     }, [sem]);
 
-    const handleCancel = () => {
+    useEffect(() => {
+        if ((!isTemporaryRecord && searchParams.get('edit') !== '1') || !sem || isEditing) return;
+        setEditData({ ...sem });
+        setIsEditing(true);
+        if (!isTemporaryRecord) setSearchParams({}, { replace: true });
+    }, [isEditing, isTemporaryRecord, searchParams, sem, setSearchParams]);
+
+    const handleCreateExvoto = async () => {
+        if (!sem) return;
+        try {
+            const created = await api.createExvoto({ conservation_sem_id: sem.id } as Omit<Exvoto, 'id'>);
+            navigate(`/exvoto/${created.id}?new=1&returnTo=${encodeURIComponent(`/sem/${sem.id}`)}`);
+        } catch (error) {
+            console.error('Error creando exvoto desde el SEM:', error);
+            alert('No se pudo crear el exvoto');
+        }
+    };
+
+    const handleCancel = async () => {
+        if (isTemporaryRecord && sem) {
+            try {
+                await api.deleteSem(sem.id);
+                navigate(returnTo, { replace: true });
+            } catch (err) {
+                console.error('Error descartando SEM temporal:', err);
+                alert('No se pudo descartar el SEM temporal');
+            }
+            return;
+        }
         setIsEditing(false);
         setEditData(null);
     };
@@ -49,6 +81,7 @@ const SemDetailPage: React.FC = () => {
             setSem(updated);
             setIsEditing(false);
             setEditData(null);
+            if (isTemporaryRecord) setSearchParams({}, { replace: true });
         } catch (err) {
             console.error('Error guardando SEM:', err);
             alert('No se pudo guardar los cambios');
@@ -76,15 +109,7 @@ const SemDetailPage: React.FC = () => {
     // Handle keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            const target = e.target as HTMLElement;
-            const isInputField = target && (
-                target.tagName === 'INPUT' ||
-                target.tagName === 'TEXTAREA' ||
-                target.tagName === 'SELECT' ||
-                target.contentEditable === 'true' ||
-                target.getAttribute('role') === 'textbox'
-            );
-            if (isInputField) return;
+            if (isEditableTarget(e.target)) return;
             if (e.shiftKey && e.key === 'E') { e.preventDefault(); handleStartEdit(); return; }
             if (e.ctrlKey || e.altKey || e.metaKey) return;
             switch (e.key.toLowerCase()) {
@@ -172,7 +197,7 @@ const SemDetailPage: React.FC = () => {
                                 Editar
                             </button>
                             <button
-                                onClick={() => navigate(`/exvotos?new=1&offering_sem_id=${sem.id}`)}
+                                onClick={handleCreateExvoto}
                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                             >
                                 + Nuevo Exvoto

@@ -131,10 +131,7 @@ const CatalogPage: React.FC = () => {
     }, [searchParams, catalogs, setSearchParams]);
 
     const handleOpenModal = () => {
-        setEditingCatalog(null);
-        setNewCatalogData(getInitialCatalogData());
-        setIsModalOpen(true);
-        setHasUnsaved(false);
+        void handleCreateEmpty();
     };
 
     const handleEditCatalog = (id: number) => {
@@ -186,14 +183,15 @@ const CatalogPage: React.FC = () => {
         e.preventDefault();
         try {
             if (editingCatalog) {
-                await api.updateCatalog(editingCatalog.id, newCatalogData);
+                const updated = await api.updateCatalog(editingCatalog.id, newCatalogData);
+                setCatalogs(prev => prev.map(catalog => catalog.id === editingCatalog.id ? { ...catalog, ...updated } : catalog));
                 showToast('Catálogo actualizado correctamente', 'success');
             } else {
-                await api.createCatalog(newCatalogData);
+                const created = await api.createCatalog(newCatalogData);
+                setCatalogs(prev => [...prev, created]);
                 showToast('Catálogo creado correctamente', 'success');
             }
             handleModalClose();
-            await fetchData();
         } catch (error) {
             console.error('Error al guardar catálogo:', error);
             showToast(editingCatalog ? 'Error al actualizar el catálogo' : 'Error al crear el catálogo', 'error');
@@ -217,12 +215,10 @@ const CatalogPage: React.FC = () => {
         try {
             const emptyCatalog = getInitialCatalogData();
             const created = await api.createCatalog(emptyCatalog);
-            setCatalogs(prev => [...prev, created]);
-            await fetchData();
-            showToast('Fila vacía creada correctamente', 'success');
+            navigate(`/catalog/${created.id}?new=1&returnTo=${encodeURIComponent('/catalog')}`);
         } catch (error) {
             console.error("Error creating empty catalog:", error);
-            showToast('Error al crear fila vacía', 'error');
+            showToast('Error al crear el catálogo', 'error');
         }
     };
 
@@ -231,17 +227,15 @@ const CatalogPage: React.FC = () => {
             const { id, ...catalogData } = catalog;
             const duplicated = await api.createCatalog(catalogData);
 
-            // Actualizar estado local sin recargar, manteniendo el orden por updated_at
             setCatalogs(prev => {
-                const newList = [...prev, duplicated];
-                return newList.sort((a, b) => {
-                    const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-                    const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-                    return dateB - dateA;
-                });
+                const originalIndex = prev.findIndex(item => item.id === catalog.id);
+                return originalIndex === -1
+                    ? [...prev, duplicated]
+                    : [...prev.slice(0, originalIndex + 1), duplicated, ...prev.slice(originalIndex + 1)];
             });
 
             showToast('Catálogo duplicado correctamente', 'success');
+            return duplicated;
         } catch (error) {
             console.error("Error duplicating catalog:", error);
             showToast('Error al duplicar catálogo', 'error');
@@ -409,6 +403,7 @@ const CatalogPage: React.FC = () => {
                 onRowUpdate={handleUpdate}
                 onCreateEmpty={handleCreateEmpty}
                 onDuplicateRow={handleDuplicate}
+                temporaryStateResetKey={currentPage}
                 className="mt-4"
             />
 

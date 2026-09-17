@@ -125,10 +125,7 @@ const SemPage: React.FC = () => {
   }, [searchParams, sems, setSearchParams]);
 
   const handleOpenModal = () => {
-    setEditingSem(null);
-    setNewSemData(getInitialSemData());
-    setIsModalOpen(true);
-    setHasUnsaved(false);
+    void handleCreateEmpty();
   };
 
   const handleEditSem = (id: number) => {
@@ -157,14 +154,15 @@ const SemPage: React.FC = () => {
     e.preventDefault();
     try {
       if (editingSem) {
-        await api.updateSem(editingSem.id, newSemData);
+        const updated = await api.updateSem(editingSem.id, newSemData);
+        setSems(prev => prev.map(sem => sem.id === editingSem.id ? { ...sem, ...updated } : sem));
         showToast('SEM actualizado correctamente', 'success');
       } else {
-        await api.createSem(newSemData);
+        const created = await api.createSem(newSemData);
+        setSems(prev => [...prev, created]);
         showToast('SEM creado correctamente', 'success');
       }
       handleModalClose();
-      await fetchData();
     } catch (error) {
       console.error('Error al guardar SEM:', error);
       showToast(editingSem ? 'Error al actualizar el SEM' : 'Error al crear el SEM', 'error');
@@ -188,12 +186,10 @@ const SemPage: React.FC = () => {
     try {
       const emptySem = getInitialSemData();
       const created = await api.createSem(emptySem);
-      setSems(prev => [...prev, created]);
-      await fetchData();
-      showToast('Fila vacía creada correctamente', 'success');
+      navigate(`/sem/${created.id}?new=1&returnTo=${encodeURIComponent('/sems')}`);
     } catch (error) {
       console.error("Error creating empty sem:", error);
-      showToast('Error al crear fila vacía', 'error');
+      showToast('Error al crear el SEM', 'error');
     }
   };
 
@@ -202,17 +198,15 @@ const SemPage: React.FC = () => {
       const { id, ...semData } = sem;
       const duplicated = await api.createSem(semData);
 
-      // Actualizar estado local sin recargar, manteniendo el orden por updated_at
       setSems(prev => {
-        const newList = [...prev, duplicated];
-        return newList.sort((a, b) => {
-          const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-          const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-          return dateB - dateA;
-        });
+        const originalIndex = prev.findIndex(item => item.id === sem.id);
+        return originalIndex === -1
+          ? [...prev, duplicated]
+          : [...prev.slice(0, originalIndex + 1), duplicated, ...prev.slice(originalIndex + 1)];
       });
 
       showToast('SEM duplicado correctamente', 'success');
+      return duplicated;
     } catch (error) {
       console.error("Error duplicating sem:", error);
       showToast('Error al duplicar SEM', 'error');
@@ -383,6 +377,7 @@ const SemPage: React.FC = () => {
         onRowUpdate={handleUpdate}
         onCreateEmpty={handleCreateEmpty}
         onDuplicateRow={handleDuplicate}
+        temporaryStateResetKey={currentPage}
         className="mt-4"
       />
 

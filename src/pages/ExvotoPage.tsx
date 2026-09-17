@@ -163,6 +163,7 @@ const ExvotoPage: React.FC = () => {
     const editId = searchParams.get('edit');
     const isNew = searchParams.get('new') === '1';
     const offeringSemId = searchParams.get('offering_sem_id');
+    const conservationSemId = searchParams.get('conservation_sem_id');
 
     if (editId && exvotos.length > 0) {
       const exvotoId = parseInt(editId, 10);
@@ -175,11 +176,15 @@ const ExvotoPage: React.FC = () => {
         setSearchParams({});
       }
     } else if (isNew && !loading) {
-      // Abrir modal de nuevo exvoto, pre-rellenando offering_sem_id si se especifica
+      // Abrir modal de nuevo exvoto con el SEM indicado por el origen de la navegación.
       const initial = getInitialExvotoData();
       if (offeringSemId) {
         const semId = parseInt(offeringSemId, 10);
         if (Number.isFinite(semId)) initial.offering_sem_id = semId;
+      }
+      if (conservationSemId) {
+        const semId = parseInt(conservationSemId, 10);
+        if (Number.isFinite(semId)) initial.conservation_sem_id = semId;
       }
       setEditingExvoto(null);
       setNewExvotoData(initial);
@@ -279,13 +284,10 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
     try {
       const emptyExvoto = getInitialExvotoData();
       const created = await api.createExvoto(emptyExvoto);
-      setExvotos(prev => [...prev, created]);
-      // Refrescar datos para asegurar consistencia
-      await fetchData();
-      showToast('Fila vacía creada correctamente', 'success');
+      navigate(`/exvoto/${created.id}?new=1&returnTo=${encodeURIComponent('/exvotos')}`);
     } catch (error) {
       console.error("Error creating empty exvoto:", error);
-      showToast('Error al crear fila vacía', 'error');
+      showToast('Error al crear el exvoto', 'error');
     }
   };
 
@@ -295,17 +297,15 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
       const { id, ...exvotoData } = exvoto;
       const duplicated = await api.createExvoto(exvotoData);
 
-      // Actualizar estado local sin recargar, manteniendo el orden por updated_at
       setExvotos(prev => {
-        const newList = [...prev, duplicated];
-        return newList.sort((a, b) => {
-          const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-          const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-          return dateB - dateA;
-        });
+        const originalIndex = prev.findIndex(item => item.id === exvoto.id);
+        return originalIndex === -1
+          ? [...prev, duplicated]
+          : [...prev.slice(0, originalIndex + 1), duplicated, ...prev.slice(originalIndex + 1)];
       });
 
       showToast('Exvoto duplicado correctamente', 'success');
+      return duplicated;
     } catch (error) {
       console.error("Error duplicating exvoto:", error);
       showToast('Error al duplicar exvoto', 'error');
@@ -313,11 +313,7 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
   };
 
   const handleOpenModal = () => {
-    setEditingExvoto(null);
-    setNewExvotoData(getInitialExvotoData());
-    setIsModalOpen(true);
-    setHasUnsaved(false);
-    setImageChanged(false);
+    void handleCreateEmpty();
   };
 
   const handleEditExvoto = (id: number) => {
@@ -376,6 +372,7 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
         } else {
           showToast('Exvoto actualizado correctamente', 'success');
         }
+        setExvotos(prev => prev.map(exvoto => exvoto.id === editingExvoto.id ? { ...exvoto, ...updated } : exvoto));
       } else {
         const created = await api.createExvoto(payload as Omit<Exvoto, 'id'>);
         const extra = selectedImages.slice(1);
@@ -389,10 +386,10 @@ const columns: ColumnDef<Exvoto>[] = useMemo(() => [
         } else {
           showToast('Exvoto creado correctamente', 'success');
         }
+        setExvotos(prev => [...prev, created]);
       }
       handleModalClose();
       setSelectedImages([]);
-      await fetchData();
     } catch (error) {
       console.error('Error al guardar exvoto:', error);
       showToast(editingExvoto ? 'Error al actualizar el exvoto' : 'Error al crear el exvoto', 'error');
@@ -920,6 +917,7 @@ return (
         onRowUpdate={handleUpdate}
         onCreateEmpty={handleCreateEmpty}
         onDuplicateRow={handleDuplicate}
+        temporaryStateResetKey={currentPage}
         className="mt-4"
       />
 

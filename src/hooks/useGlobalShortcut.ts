@@ -1,4 +1,5 @@
 import { useCallback, useEffect } from 'react';
+import { isEditableTarget } from '../utils/keyboard';
 
 interface UseNewShortcutOptions {
   enabled?: boolean;
@@ -16,15 +17,7 @@ export function useNewShortcut({ enabled = true, isModalOpen = false, onNew }: U
     if (e.ctrlKey || e.altKey || e.metaKey) return;
 
     // No disparar si el usuario está escribiendo en un input/textarea/select o contentEditable
-    const target = e.target as HTMLElement | null;
-    const isTyping = !!target && (
-      target.tagName === 'INPUT' ||
-      target.tagName === 'TEXTAREA' ||
-      target.tagName === 'SELECT' ||
-      target.isContentEditable ||
-      target.getAttribute('role') === 'textbox'
-    );
-    if (isTyping) return;
+    if (isEditableTarget(e.target)) return;
 
     if (e.key.toLowerCase() === 'n') {
       e.preventDefault();
@@ -40,4 +33,3 @@ export function useNewShortcut({ enabled = true, isModalOpen = false, onNew }: U
     };
   }, [handleKeyDown]);
 }
-

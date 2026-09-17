@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Exvoto, Sem, ExvotoImage as ExvotoImageType, Miracle, Character, Divinity } from '../types';
 import * as api from '../services/api';
 import { getImageSrc } from '../utils/images';
+import { isEditableTarget } from '../utils/keyboard';
 import RichTextEditor from '../components/RichTextEditor';
 
 // Abre una imagen (data URL o URL HTTP) en una nueva pestaña
@@ -44,6 +45,9 @@ const DetailField = ({ label, value }: { label: string, value: React.ReactNode }
 const ExvotoDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const isTemporaryRecord = searchParams.get('new') === '1';
+    const returnTo = searchParams.get('returnTo') || '/exvotos';
     const [exvoto, setExvoto] = useState<Exvoto | null>(null);
     const [sems, setSems] = useState<Sem[]>([]);
     const [miracles, setMiracles] = useState<Miracle[]>([]);
@@ -120,7 +124,24 @@ const ExvotoDetailPage: React.FC = () => {
         }
     }, [exvoto]);
 
-    const handleCancelEdit = () => {
+    useEffect(() => {
+        if ((!isTemporaryRecord && searchParams.get('edit') !== '1') || !exvoto || isEditing) return;
+        setEditData({ ...exvoto });
+        setIsEditing(true);
+        if (!isTemporaryRecord) setSearchParams({}, { replace: true });
+    }, [exvoto, isEditing, isTemporaryRecord, searchParams, setSearchParams]);
+
+    const handleCancelEdit = async () => {
+        if (isTemporaryRecord && exvoto) {
+            try {
+                await api.deleteExvoto(exvoto.id);
+                navigate(returnTo, { replace: true });
+            } catch (err) {
+                console.error('Error descartando exvoto temporal:', err);
+                alert('No se pudo descartar el exvoto temporal');
+            }
+            return;
+        }
         setIsEditing(false);
         setEditData(null);
     };
@@ -133,6 +154,7 @@ const ExvotoDetailPage: React.FC = () => {
             setExvoto(updated);
             setIsEditing(false);
             setEditData(null);
+            if (isTemporaryRecord) setSearchParams({}, { replace: true });
         } catch (err) {
             console.error('Error guardando exvoto:', err);
             alert('No se pudo guardar los cambios');
@@ -149,16 +171,7 @@ const ExvotoDetailPage: React.FC = () => {
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             // Don't handle keyboard shortcuts if user is typing in an input field
-            const target = e.target as HTMLElement;
-            const isInputField = target && (
-                target.tagName === 'INPUT' ||
-                target.tagName === 'TEXTAREA' ||
-                target.tagName === 'SELECT' ||
-                target.contentEditable === 'true' ||
-                target.getAttribute('role') === 'textbox'
-            );
-
-            if (isInputField) return;
+            if (isEditableTarget(e.target)) return;
 
             // Edit with Shift+E
             if (e.shiftKey && e.key === 'E') {

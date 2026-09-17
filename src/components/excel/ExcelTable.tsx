@@ -46,7 +46,9 @@ interface ExcelTableProps<T> {
   // Create empty record
   onCreateEmpty?: () => Promise<void>;
   // Duplicate row
-  onDuplicateRow?: (data: T) => Promise<void>;
+  onDuplicateRow?: (data: T) => Promise<T | void>;
+  // Cambiar de página reinicia los indicadores temporales de esta tabla.
+  temporaryStateResetKey?: string | number;
   // Page config persistence
   pageId?: string;
 }
@@ -87,6 +89,7 @@ const ExcelTableInner = <T extends Record<string, any>>({
   enableInlineEdit = false,
   onCreateEmpty,
   onDuplicateRow,
+  temporaryStateResetKey,
   pageId
 }: ExcelTableProps<T>, ref: React.Ref<ExcelTableRef>) => {
   const tableRef = useRef<HTMLDivElement>(null);
@@ -112,10 +115,30 @@ const ExcelTableInner = <T extends Record<string, any>>({
   const [copiedValue, setCopiedValue] = useState<{ value: any; columnKey: string; rowIndex: number } | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [pasteStatus, setPasteStatus] = useState<{ rowIndex: number; columnKey: string } | null>(null);
+  const [duplicatedRowIds, setDuplicatedRowIds] = useState<Set<string | number>>(new Set());
 
   // Edit Modal state (for 'e' key)
   const [showEditModal, setShowEditModal] = useState(false);
   const [editModalData, setEditModalData] = useState<{ rowIndex: number; columnKey: string; value: any } | null>(null);
+
+  // Los avisos de duplicación son deliberadamente locales a la página actual.
+  // Al paginar se vuelve a cargar el orden normal y desaparecen.
+  useEffect(() => {
+    setDuplicatedRowIds(new Set());
+  }, [temporaryStateResetKey]);
+
+  const handleDuplicateRow = useCallback(async (rowIndex: number) => {
+    if (!onDuplicateRow) return;
+
+    const rowData = excelState.filteredData[rowIndex];
+    if (!rowData) return;
+
+    const duplicated = await onDuplicateRow(rowData);
+    const duplicatedId = duplicated?.[idField];
+    if (duplicatedId !== undefined && duplicatedId !== null) {
+      setDuplicatedRowIds(previous => new Set(previous).add(duplicatedId));
+    }
+  }, [excelState.filteredData, idField, onDuplicateRow]);
   
   // Focus on editing input when entering edit mode
   useEffect(() => {
@@ -419,10 +442,7 @@ const ExcelTableInner = <T extends Record<string, any>>({
     onNavigateToReferenceNewTab,
     // Ctrl+D -> duplicate row
     onDuplicateRow: onDuplicateRow ? (rowIndex) => {
-      const rowData = excelState.filteredData[rowIndex];
-      if (rowData) {
-        onDuplicateRow(rowData);
-      }
+      void handleDuplicateRow(rowIndex);
     } : undefined
   });
 
@@ -726,21 +746,28 @@ const ExcelTableInner = <T extends Record<string, any>>({
                 const rowId = item[idField] ?? rowIndex;
                 const rowHeight = excelState.rowHeights[String(rowId)] ?? rowHeightPx[rowDensity];
                 const hasCustomRowHeight = excelState.rowHeights[String(rowId)] !== undefined;
+                const isDuplicatedRow = duplicatedRowIds.has(rowId);
 
                 return (
                   <div
                     key={rowId}
                     className={cn(
                       "flex border-b border-gray-200 hover:bg-gray-50 transition-colors",
-                      excelState.selectedRows.has(rowId) && "bg-blue-50"
+                      excelState.selectedRows.has(rowId) && "bg-blue-50",
+                      isDuplicatedRow && "ring-2 ring-inset ring-amber-400 bg-amber-50/70"
                     )}
                   >
                 {/* Columna de números de fila */}
                 <div
-                  className="relative flex items-center justify-center text-xs font-medium text-gray-500 bg-gray-50 border-r border-gray-300 sticky left-0 z-10"
+                  className="relative flex flex-col items-center justify-center gap-0.5 text-xs font-medium text-gray-500 bg-gray-50 border-r border-gray-300 sticky left-0 z-10"
                   style={{ width: '50px', minWidth: '50px', maxWidth: '50px', height: `${rowHeight}px` }}
                 >
-                  {rowIndex + 1}
+                  <span>{rowIndex + 1}</span>
+                  {isDuplicatedRow && (
+                    <span className="rounded bg-amber-100 px-1 py-px text-[9px] font-semibold leading-none text-amber-800" title="Fila duplicada en esta sesión">
+                      Duplicado
+                    </span>
+                  )}
                   <div
                     className={cn(
                       "absolute inset-x-0 bottom-0 h-1.5 cursor-row-resize transition-colors",
@@ -765,6 +792,7 @@ const ExcelTableInner = <T extends Record<string, any>>({
                       className={cn(
                         "px-3 py-2 text-sm text-gray-900 cursor-cell bg-white",
                         "border-r border-gray-200 last:border-r-0",
+                        isDuplicatedRow && "bg-amber-50/70",
                         // Diferentes estilos si está editando o no
                         isEditingThisCell
                           ? "min-h-[80px] items-start overflow-visible whitespace-normal break-words"

@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { ExcelModeState, ExcelModeActions } from './useExcelMode';
+import { isEditableTarget } from '../utils/keyboard';
 
 interface ExcelKeyboardOptions {
   enabled: boolean;
@@ -53,14 +54,7 @@ export function useExcelKeyboard<T extends Record<string, any>>(
     const isAlt = e.altKey;
 
     // Don't handle keyboard shortcuts if user is typing in an input field
-    const target = e.target as HTMLElement;
-    const isInputField = target && (
-      target.tagName === 'INPUT' ||
-      target.tagName === 'TEXTAREA' ||
-      target.tagName === 'SELECT' ||
-      target.contentEditable === 'true' ||
-      target.getAttribute('role') === 'textbox'
-    );
+    const isInputField = isEditableTarget(e.target);
 
     // Allow Ctrl+C and Ctrl+V always (they work with clipboard)
     // Allow Ctrl+A and Shift+Space only if there's a selected cell

@@ -6,6 +6,7 @@ import { PlusIcon, MagnifyingGlassIcon } from '../components/icons';
 import * as api from '../services/api';
 import { Character } from '../types';
 import { useNewShortcut } from '../hooks/useGlobalShortcut';
+import { isEditableTarget } from '../utils/keyboard';
 
 const CharactersPage: React.FC = () => {
     const navigate = useNavigate();
@@ -39,15 +40,7 @@ const CharactersPage: React.FC = () => {
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
             if (e.ctrlKey || e.altKey || e.metaKey) return;
-            const target = e.target as HTMLElement | null;
-            const isTyping = !!target && (
-                target.tagName === 'INPUT' ||
-                target.tagName === 'TEXTAREA' ||
-                target.tagName === 'SELECT' ||
-                target.isContentEditable ||
-                target.getAttribute('role') === 'textbox'
-            );
-            if (isTyping) return;
+            if (isEditableTarget(e.target)) return;
 
             switch (e.key.toLowerCase()) {
                 case 's':

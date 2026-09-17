@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Divinity, Sem } from '../types';
 import * as api from '../services/api';
 import RichTextEditor from '../components/RichTextEditor';
+import { isEditableTarget } from '../utils/keyboard';
 
 const DivinityDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const isTemporaryRecord = searchParams.get('new') === '1';
+    const returnTo = searchParams.get('returnTo') || '/divinities';
     const [divinity, setDivinity] = useState<Divinity | null>(null);
     const [allSems, setAllSems] = useState<Sem[]>([]);
     const [linkedSems, setLinkedSems] = useState<Sem[]>([]);
@@ -48,7 +52,24 @@ const DivinityDetailPage: React.FC = () => {
         }
     }, [divinity]);
 
-    const handleCancel = () => {
+    useEffect(() => {
+        if ((!isTemporaryRecord && searchParams.get('edit') !== '1') || !divinity || isEditing) return;
+        setEditData({ ...divinity });
+        setIsEditing(true);
+        if (!isTemporaryRecord) setSearchParams({}, { replace: true });
+    }, [divinity, isEditing, isTemporaryRecord, searchParams, setSearchParams]);
+
+    const handleCancel = async () => {
+        if (isTemporaryRecord && divinity) {
+            try {
+                await api.deleteDivinity(divinity.id);
+                navigate(returnTo, { replace: true });
+            } catch (err) {
+                console.error('Error descartando divinidad temporal:', err);
+                alert('No se pudo descartar la divinidad temporal');
+            }
+            return;
+        }
         setIsEditing(false);
         setEditData(null);
     };
@@ -61,6 +82,7 @@ const DivinityDetailPage: React.FC = () => {
             setDivinity(updated);
             setIsEditing(false);
             setEditData(null);
+            if (isTemporaryRecord) setSearchParams({}, { replace: true });
         } catch (err) {
             console.error('Error guardando divinidad:', err);
             alert('No se pudo guardar los cambios');
@@ -130,13 +152,7 @@ const DivinityDetailPage: React.FC = () => {
     // Handle keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            const target = e.target as HTMLElement;
-            const isInputField = target && (
-                target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' ||
-                target.tagName === 'SELECT' || target.contentEditable === 'true' ||
-                target.getAttribute('role') === 'textbox'
-            );
-            if (isInputField) return;
+            if (isEditableTarget(e.target)) return;
             if (e.shiftKey && e.key === 'E') { e.preventDefault(); handleStartEdit(); return; }
             if (e.ctrlKey || e.altKey || e.metaKey) return;
             switch (e.key.toLowerCase()) {

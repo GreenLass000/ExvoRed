@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Catalog, Sem, CatalogSem } from '../types';
 import * as api from '../services/api';
 import RichTextEditor from '../components/RichTextEditor';
+import { isEditableTarget } from '../utils/keyboard';
 
 const CatalogDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const isTemporaryRecord = searchParams.get('new') === '1';
+    const returnTo = searchParams.get('returnTo') || '/catalog';
     const [catalog, setCatalog] = useState<Catalog | null>(null);
     const [allSems, setAllSems] = useState<Sem[]>([]);
     const [linkedSems, setLinkedSems] = useState<Sem[]>([]);
@@ -48,7 +52,24 @@ const CatalogDetailPage: React.FC = () => {
         }
     }, [catalog]);
 
-    const handleCancel = () => {
+    useEffect(() => {
+        if ((!isTemporaryRecord && searchParams.get('edit') !== '1') || !catalog || isEditing) return;
+        setEditData({ ...catalog });
+        setIsEditing(true);
+        if (!isTemporaryRecord) setSearchParams({}, { replace: true });
+    }, [catalog, isEditing, isTemporaryRecord, searchParams, setSearchParams]);
+
+    const handleCancel = async () => {
+        if (isTemporaryRecord && catalog) {
+            try {
+                await api.deleteCatalog(catalog.id);
+                navigate(returnTo, { replace: true });
+            } catch (err) {
+                console.error('Error descartando catálogo temporal:', err);
+                alert('No se pudo descartar el catálogo temporal');
+            }
+            return;
+        }
         setIsEditing(false);
         setEditData(null);
     };
@@ -61,6 +82,7 @@ const CatalogDetailPage: React.FC = () => {
             setCatalog(updated);
             setIsEditing(false);
             setEditData(null);
+            if (isTemporaryRecord) setSearchParams({}, { replace: true });
         } catch (err) {
             console.error('Error guardando catálogo:', err);
             alert('No se pudo guardar los cambios');
@@ -112,13 +134,7 @@ const CatalogDetailPage: React.FC = () => {
     // Handle keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            const target = e.target as HTMLElement;
-            const isInputField = target && (
-                target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' ||
-                target.tagName === 'SELECT' || target.contentEditable === 'true' ||
-                target.getAttribute('role') === 'textbox'
-            );
-            if (isInputField) return;
+            if (isEditableTarget(e.target)) return;
             if (e.shiftKey && e.key === 'E') { e.preventDefault(); handleStartEdit(); return; }
             if (e.ctrlKey || e.altKey || e.metaKey) return;
             switch (e.key.toLowerCase()) {

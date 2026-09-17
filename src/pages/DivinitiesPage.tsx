@@ -108,10 +108,7 @@ const DivinitiesPage: React.FC = () => {
   }, [searchParams, divinities, setSearchParams]);
 
   const handleOpenModal = () => {
-    setEditingDivinity(null);
-    setNewDivinityData(getInitialDivinityData());
-    setIsModalOpen(true);
-    setHasUnsaved(false);
+    void handleCreateEmpty();
   };
 
   const handleEditDivinity = (id: number) => {
@@ -141,14 +138,15 @@ const DivinitiesPage: React.FC = () => {
     e.preventDefault();
     try {
       if (editingDivinity) {
-        await api.updateDivinity(editingDivinity.id, newDivinityData);
+        const updated = await api.updateDivinity(editingDivinity.id, newDivinityData);
+        setDivinities(prev => prev.map(divinity => divinity.id === editingDivinity.id ? { ...divinity, ...updated } : divinity));
         showToast('Divinidad actualizada correctamente', 'success');
       } else {
-        await api.createDivinity(newDivinityData);
+        const created = await api.createDivinity(newDivinityData);
+        setDivinities(prev => [...prev, created]);
         showToast('Divinidad creada correctamente', 'success');
       }
       handleModalClose();
-      await fetchData();
     } catch (error) {
       console.error('Error saving divinity:', error);
       showToast('Error al guardar la divinidad', 'error');
@@ -176,19 +174,10 @@ const DivinitiesPage: React.FC = () => {
       };
       const created = await api.createDivinity(emptyDivinity);
 
-      // Actualizar estado local sin recargar, manteniendo el orden por updated_at
-      setDivinities(prev => {
-        const newList = [...prev, created];
-        return newList.sort((a, b) => {
-          const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-          const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-          return dateB - dateA;
-        });
-      });
-      showToast('Nueva fila vacía creada', 'success');
+      navigate(`/divinity/${created.id}?new=1&returnTo=${encodeURIComponent('/divinities')}`);
     } catch (error) {
       console.error("Error creating empty divinity:", error);
-      showToast('Error al crear fila vacía', 'error');
+      showToast('Error al crear la divinidad', 'error');
     }
   };
 
@@ -197,17 +186,15 @@ const DivinitiesPage: React.FC = () => {
       const { id, ...divinityData } = divinity;
       const duplicated = await api.createDivinity(divinityData);
 
-      // Actualizar estado local sin recargar, manteniendo el orden por updated_at
       setDivinities(prev => {
-        const newList = [...prev, duplicated];
-        return newList.sort((a, b) => {
-          const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-          const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-          return dateB - dateA;
-        });
+        const originalIndex = prev.findIndex(item => item.id === divinity.id);
+        return originalIndex === -1
+          ? [...prev, duplicated]
+          : [...prev.slice(0, originalIndex + 1), duplicated, ...prev.slice(originalIndex + 1)];
       });
 
       showToast('Divinidad duplicada correctamente', 'success');
+      return duplicated;
     } catch (error) {
       console.error("Error duplicating divinity:", error);
       showToast('Error al duplicar divinidad', 'error');
@@ -430,6 +417,7 @@ const DivinitiesPage: React.FC = () => {
         onRowUpdate={handleUpdate}
         onCreateEmpty={handleCreateEmpty}
         onDuplicateRow={handleDuplicate}
+        temporaryStateResetKey={currentPage}
         className="mt-4"
       />
 

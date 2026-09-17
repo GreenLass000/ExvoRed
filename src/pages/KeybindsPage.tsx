@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { isEditableTarget } from '../utils/keyboard';
 
 type Item = { label: string; keys: (string | React.ReactNode)[] };
 
@@ -45,15 +46,7 @@ const KeybindsPage: React.FC = () => {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.altKey || e.metaKey) return;
-      const target = e.target as HTMLElement | null;
-      const isTyping = !!target && (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.tagName === 'SELECT' ||
-        target.isContentEditable ||
-        target.getAttribute('role') === 'textbox'
-      );
-      if (isTyping) return;
+      if (isEditableTarget(e.target)) return;
 
       switch (e.key.toLowerCase()) {
         case 's':
