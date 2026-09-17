@@ -513,7 +513,7 @@ const ExcelTableInner = <T extends Record<string, any>>({
   }, [columns, data]);
 
   // Render cell content
-  const renderCellContent = useCallback((item: T, columnKey: string, rowIndex: number) => {
+  const renderCellContent = useCallback((item: T, columnKey: string, rowIndex: number, shouldWrap = false) => {
     const column = columns.find(col => String(col.key) === columnKey);
 
     // Show status message if this row has one
@@ -576,10 +576,10 @@ const ExcelTableInner = <T extends Record<string, any>>({
     // Handle truncated type - show plain text truncated
     if (column?.type === 'truncated' && typeof contentToRender === 'string') {
       const plainText = isHTML(contentToRender) ? stripHTML(contentToRender) : contentToRender;
-      const truncatedText = plainText.length > 50 ? plainText.substring(0, 50) + '...' : plainText;
+      const visibleText = shouldWrap ? plainText : (plainText.length > 50 ? plainText.substring(0, 50) + '...' : plainText);
       return (
         <span title={plainText}>
-          {searchQuery ? highlightText(truncatedText, searchQuery) : truncatedText}
+          {searchQuery ? highlightText(visibleText, searchQuery) : visibleText}
         </span>
       );
     }
@@ -725,6 +725,7 @@ const ExcelTableInner = <T extends Record<string, any>>({
               (() => {
                 const rowId = item[idField] ?? rowIndex;
                 const rowHeight = excelState.rowHeights[String(rowId)] ?? rowHeightPx[rowDensity];
+                const hasCustomRowHeight = excelState.rowHeights[String(rowId)] !== undefined;
 
                 return (
                   <div
@@ -767,7 +768,9 @@ const ExcelTableInner = <T extends Record<string, any>>({
                         // Diferentes estilos si está editando o no
                         isEditingThisCell
                           ? "min-h-[80px] items-start overflow-visible whitespace-normal break-words"
-                          : `overflow-hidden text-ellipsis whitespace-nowrap ${rowHeightClass[rowDensity]} items-center`,
+                          : hasCustomRowHeight
+                            ? "overflow-hidden whitespace-normal break-words items-start"
+                            : `overflow-hidden text-ellipsis whitespace-nowrap ${rowHeightClass[rowDensity]} items-center`,
                         "flex flex-shrink-0",
                         // Special styling for foreign key cells
                         (column.key.includes('sem_id') || column.key.includes('catalog_id')) &&
@@ -828,7 +831,7 @@ const ExcelTableInner = <T extends Record<string, any>>({
                           />
                         )
                       ) : (
-                        renderCellContent(item, column.key, rowIndex)
+                        renderCellContent(item, column.key, rowIndex, hasCustomRowHeight)
                       )}
                     </div>
                   );
