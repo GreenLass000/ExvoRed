@@ -57,6 +57,18 @@ const SemDetailPage: React.FC = () => {
         }
     };
 
+    const handleDelete = async () => {
+        if (!sem || !window.confirm('¿Eliminar este SEM? Esta acción no se puede deshacer.')) return;
+
+        try {
+            await api.deleteSem(sem.id);
+            navigate('/sems');
+        } catch (err) {
+            console.error('Error eliminando SEM:', err);
+            alert('No se pudo eliminar el SEM');
+        }
+    };
+
     const setField = (key: keyof Sem, value: string | number | null) => {
         setEditData(prev => prev ? { ...prev, [key]: value } : prev);
     };
@@ -164,6 +176,9 @@ const SemDetailPage: React.FC = () => {
                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                             >
                                 + Nuevo Exvoto
+                            </button>
+                            <button onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                                Eliminar
                             </button>
                             <button onClick={() => navigate('/sems')} className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700">
                                 ← Volver a SEMs

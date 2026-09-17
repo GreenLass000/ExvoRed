@@ -69,6 +69,18 @@ const CatalogDetailPage: React.FC = () => {
         }
     };
 
+    const handleDelete = async () => {
+        if (!catalog || !window.confirm('¿Eliminar este catálogo? Esta acción no se puede deshacer.')) return;
+
+        try {
+            await api.deleteCatalog(catalog.id);
+            navigate('/catalog');
+        } catch (err) {
+            console.error('Error eliminando catálogo:', err);
+            alert('No se pudo eliminar el catálogo');
+        }
+    };
+
     const setField = (key: keyof Catalog, value: string | number | null) => {
         setEditData(prev => prev ? { ...prev, [key]: value } : prev);
     };
@@ -192,6 +204,7 @@ const CatalogDetailPage: React.FC = () => {
                     ) : (
                         <>
                             <button onClick={handleStartEdit} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Editar</button>
+                            <button onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Eliminar</button>
                             <button onClick={() => navigate('/catalog')} className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700">← Volver a Catálogos</button>
                         </>
                     )}

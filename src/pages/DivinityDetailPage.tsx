@@ -69,6 +69,25 @@ const DivinityDetailPage: React.FC = () => {
         }
     };
 
+    const handleDelete = async () => {
+        if (!divinity) return;
+
+        if (linkedSems.length > 0) {
+            alert('No se puede eliminar esta divinidad mientras tenga SEMs vinculados. Desvincúlalos primero.');
+            return;
+        }
+
+        if (!window.confirm('¿Eliminar esta divinidad? Esta acción no se puede deshacer.')) return;
+
+        try {
+            await api.deleteDivinity(divinity.id);
+            navigate('/divinities');
+        } catch (err) {
+            console.error('Error eliminando divinidad:', err);
+            alert('No se pudo eliminar la divinidad');
+        }
+    };
+
     const setField = (key: keyof Divinity, value: string | null) => {
         setEditData(prev => prev ? { ...prev, [key]: value } : prev);
     };
@@ -204,6 +223,7 @@ const DivinityDetailPage: React.FC = () => {
                     ) : (
                         <>
                             <button onClick={handleStartEdit} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Editar</button>
+                            <button onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Eliminar</button>
                             <button onClick={() => navigate('/divinities')} className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700">← Volver a Divinidades</button>
                         </>
                     )}
