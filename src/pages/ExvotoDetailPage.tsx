@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Exvoto, Sem, ExvotoImage as ExvotoImageType, Miracle, Character, Divinity } from '../types';
 import * as api from '../services/api';
@@ -58,6 +58,7 @@ const ExvotoDetailPage: React.FC = () => {
     type ActiveImage = { type: 'main'; src: string | null } | { type: 'extra'; id: number; src: string };
     const [activeImage, setActiveImage] = useState<ActiveImage | null>(null);
     const [zoomLevel, setZoomLevel] = useState(1);
+    const imageViewportRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isEditing, setIsEditing] = useState(false);
@@ -215,6 +216,23 @@ const ExvotoDetailPage: React.FC = () => {
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [handleStartEdit, navigate]);
 
+    // El listener nativo no pasivo permite cancelar el scroll de rueda/touchpad
+    // cuando se usa ese gesto para ampliar o reducir la imagen.
+    useEffect(() => {
+        if (loading) return;
+        const viewport = imageViewportRef.current;
+        if (!viewport) return;
+
+        const handleImageWheel = (event: WheelEvent) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setZoomLevel(current => Math.min(4, Math.max(0.5, current + (event.deltaY < 0 ? 0.1 : -0.1))));
+        };
+
+        viewport.addEventListener('wheel', handleImageWheel, { passive: false });
+        return () => viewport.removeEventListener('wheel', handleImageWheel);
+    }, [loading]);
+
     if (loading) {
         return <div className="text-center p-8">Cargando detalles del exvoto...</div>;
     }
@@ -232,16 +250,98 @@ const ExvotoDetailPage: React.FC = () => {
         return dateString; // Preserve exact string; avoid timezone shifts
     }
 
-    return (
-        <div className="bg-white shadow-xl rounded-lg overflow-hidden max-w-6xl mx-auto">
-            <div className="p-6 sm:p-8">
-                <div className="flex justify-between items-start gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold text-slate-800">{exvoto.internal_id || '—'}</h1>
-                        <p className="text-md text-slate-500 mt-1">Divinidad: {exvoto.virgin_or_saint || '—'}</p>
-                        <p className="text-sm text-slate-400 mt-1">ID: {exvoto.id} | Última modificación: {exvoto.updated_at || '—'}</p>
+    const renderEditableTextField = (label: string, fieldKey: keyof Exvoto, type = 'text') => {
+        if (isEditing && editData) {
+            return (
+                <div>
+                    <dt className="text-sm font-medium text-slate-500">{label}</dt>
+                    <input
+                        type={type}
+                        value={(editData[fieldKey] as string | number | null) ?? ''}
+                        onChange={event => setExvotoField(fieldKey, event.target.value || null)}
+                        className="mt-1 w-full rounded border border-blue-300 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    />
+                </div>
+            );
+        }
+        return <DetailField label={label} value={exvoto[fieldKey] as string | number | null} />;
+    };
+
+    const renderEditableSelectField = (
+        label: string,
+        fieldKey: keyof Exvoto,
+        options: Array<{ value: string | number; label: string }>,
+    ) => {
+        if (isEditing && editData) {
+            return (
+                <div>
+                    <dt className="text-sm font-medium text-slate-500">{label}</dt>
+                    <select
+                        value={String(editData[fieldKey] ?? '')}
+                        onChange={event => setExvotoField(fieldKey, event.target.value || null)}
+                        className="mt-1 w-full rounded border border-blue-300 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    >
+                        <option value="">—</option>
+                        {options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                </div>
+            );
+        }
+        return <DetailField label={label} value={exvoto[fieldKey] as string | number | null} />;
+    };
+
+    const renderEditableRichTextField = (label: string | null, fieldKey: keyof Exvoto, rows = 4) => {
+        const value = exvoto[fieldKey] as string | null;
+        if (isEditing && editData) {
+            return (
+                <div>
+                    {label && <dt className="text-sm font-medium text-slate-500">{label}</dt>}
+                    <div className={label ? 'mt-1' : 'mt-4'}>
+                        <RichTextEditor
+                            value={(editData[fieldKey] as string | null) ?? ''}
+                            onChange={nextValue => setExvotoField(fieldKey, nextValue || null)}
+                            rows={rows}
+                        />
                     </div>
-                    <div className="flex items-center gap-2 flex-wrap">
+                </div>
+            );
+        }
+
+        return (
+            <div>
+                {label && <dt className="text-sm font-medium text-slate-500">{label}</dt>}
+                <dd className={label ? 'mt-1 text-base text-slate-900' : 'mt-4 text-base text-slate-900'}>
+                    {value
+                        ? <div className="prose prose-sm max-w-none break-words" dangerouslySetInnerHTML={{ __html: value }} />
+                        : <span className="text-slate-400">—</span>}
+                </dd>
+            </div>
+        );
+    };
+
+    return (
+        <div className="w-full max-w-[1680px] mx-auto grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] xl:gap-10">
+            <section className="min-h-[calc(100vh-10rem)] bg-white shadow-xl rounded-lg" aria-label="Ficha del exvoto">
+              <div className="p-6 sm:p-8">
+                <div className="sticky top-16 z-20 -mx-6 -mt-6 mb-8 flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-6 py-6 sm:-mx-8 sm:-mt-8 sm:px-8">
+                    <div>
+                        {isEditing && editData ? (
+                          <input
+                            type="text"
+                            value={editData.internal_id ?? ''}
+                            onChange={event => setExvotoField('internal_id', event.target.value || null)}
+                            className="w-full rounded border border-blue-300 px-2 py-1 text-3xl font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                            aria-label="ID interno"
+                          />
+                        ) : (
+                          <h1 className="text-3xl font-bold text-slate-800">{exvoto.internal_id || '—'}</h1>
+                        )}
+                        <p className="mt-1 text-md text-slate-500">
+                          {(isEditing && editData ? editData.virgin_or_saint : exvoto.virgin_or_saint) || '—'} — {(isEditing && editData ? editData.conservation_sem_id : exvoto.conservation_sem_id) ? semNameMap[(isEditing && editData ? editData.conservation_sem_id : exvoto.conservation_sem_id) as number] ?? '—' : '—'}
+                        </p>
+                        <p className="hidden">ID: {exvoto.id} | Última modificación: {exvoto.updated_at || '—'}</p>
+                    </div>
+                    <div className="ml-auto flex items-center gap-2 flex-wrap">
                         {isEditing ? (
                             <>
                                 <button type="button" onClick={handleSaveEdit} disabled={saving} className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm disabled:opacity-50">
@@ -282,10 +382,160 @@ const ExvotoDetailPage: React.FC = () => {
                     </div>
                 </div>
                 
-                {/* Contenido principal en dos zonas: detalles (2/3) e imagen (1/3) */}
-                <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="space-y-10">
+                  <section>
+                    <h2 className="border-b border-slate-300 pb-2 text-xl font-semibold text-slate-700">Ubicación</h2>
+                    <dl className="mt-5 space-y-4">
+                      <div className="grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-2">
+                        {isEditing && editData ? (
+                          <div>
+                            <dt className="text-sm font-medium text-slate-500">Lugar de ofrenda</dt>
+                            <select
+                              value={editData.offering_sem_id ?? ''}
+                              onChange={event => setExvotoField('offering_sem_id', event.target.value ? Number(event.target.value) : null)}
+                              className="mt-1 w-full rounded border border-blue-300 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                            >
+                              <option value="">—</option>
+                              {sems.map(sem => <option key={sem.id} value={sem.id}>{sem.name || `SEM #${sem.id}`}</option>)}
+                            </select>
+                          </div>
+                        ) : <DetailField label="Lugar de ofrenda" value={exvoto.offering_sem_id ? semNameMap[exvoto.offering_sem_id] : null} />}
+                        {isEditing && editData ? (
+                          <div>
+                            <dt className="text-sm font-medium text-slate-500">Lugar de conservación</dt>
+                            <select
+                              value={editData.conservation_sem_id ?? ''}
+                              onChange={event => setExvotoField('conservation_sem_id', event.target.value ? Number(event.target.value) : null)}
+                              className="mt-1 w-full rounded border border-blue-300 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                            >
+                              <option value="">—</option>
+                              {sems.map(sem => <option key={sem.id} value={sem.id}>{sem.name || `SEM #${sem.id}`}</option>)}
+                            </select>
+                          </div>
+                        ) : <DetailField label="Lugar de conservación" value={exvoto.conservation_sem_id ? semNameMap[exvoto.conservation_sem_id] : null} />}
+                      </div>
+                      <DetailField
+                        label="Provincia (del SEM)"
+                        value={sems.find(sem => sem.id === (isEditing && editData ? editData.conservation_sem_id : exvoto.conservation_sem_id))?.province ?? null}
+                      />
+                      {isEditing && editData ? (
+                        <div>
+                          <dt className="text-sm font-medium text-slate-500">Divinidad</dt>
+                          <select
+                            value={editData.virgin_or_saint ?? ''}
+                            onChange={event => setExvotoField('virgin_or_saint', event.target.value || null)}
+                            className="mt-1 w-full rounded border border-blue-300 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          >
+                            <option value="">—</option>
+                            {divinities.map(divinity => <option key={divinity.id} value={divinity.name}>{divinity.name}</option>)}
+                          </select>
+                        </div>
+                      ) : <DetailField label="Divinidad" value={exvoto.virgin_or_saint} />}
+                    </dl>
+                  </section>
+                  <section>
+                    <h2 className="border-b border-slate-300 pb-2 text-xl font-semibold text-slate-700">Detalles del Milagro</h2>
+                    <dl className="mt-5 grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-2">
+                      {isEditing && editData ? (
+                        <div>
+                          <dt className="text-sm font-medium text-slate-500">Fecha</dt>
+                          <input
+                            type="date"
+                            value={editData.exvoto_date ?? ''}
+                            onChange={event => setExvotoField('exvoto_date', event.target.value || null)}
+                            className="mt-1 w-full rounded border border-blue-300 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          />
+                        </div>
+                      ) : <DetailField label="Fecha" value={exvoto.exvoto_date} />}
+                      {isEditing && editData ? (
+                        <div>
+                          <dt className="text-sm font-medium text-slate-500">Época</dt>
+                          <input
+                            type="text"
+                            value={editData.epoch ?? ''}
+                            onChange={event => setExvotoField('epoch', event.target.value || null)}
+                            className="mt-1 w-full rounded border border-blue-300 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          />
+                        </div>
+                      ) : <DetailField label="Época" value={exvoto.epoch} />}
+                      {isEditing && editData ? (
+                        <div>
+                          <dt className="text-sm font-medium text-slate-500">Milagro</dt>
+                          <select
+                            value={editData.miracle ?? ''}
+                            onChange={event => setExvotoField('miracle', event.target.value || null)}
+                            className="mt-1 w-full rounded border border-blue-300 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          >
+                            <option value="">—</option>
+                            {miracles.map(miracle => <option key={miracle.id} value={miracle.name}>{miracle.name}</option>)}
+                          </select>
+                        </div>
+                      ) : <DetailField label="Milagro" value={exvoto.miracle} />}
+                      {isEditing && editData ? (
+                        <div>
+                          <dt className="text-sm font-medium text-slate-500">Lugar del Milagro</dt>
+                          <input
+                            type="text"
+                            value={editData.miracle_place ?? ''}
+                            onChange={event => setExvotoField('miracle_place', event.target.value || null)}
+                            className="mt-1 w-full rounded border border-blue-300 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          />
+                        </div>
+                      ) : <DetailField label="Lugar del Milagro" value={exvoto.miracle_place} />}
+                    </dl>
+                  </section>
+                  <section>
+                    <h2 className="border-b border-slate-300 pb-2 text-xl font-semibold text-slate-700">Personas Involucradas</h2>
+                    <dl className="mt-5 grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-2">
+                      {renderEditableTextField('Beneficiado/a', 'benefited_name')}
+                      {renderEditableTextField('Oferente', 'offerer_name')}
+                      {renderEditableSelectField('Género', 'offerer_gender', [
+                        { value: 'Masculino', label: 'Masculino' },
+                        { value: 'Femenino', label: 'Femenino' },
+                        { value: 'Ambos', label: 'Ambos' },
+                        { value: 'Desconocido', label: 'Desconocido' },
+                      ])}
+                      {renderEditableTextField('Lugar de Origen', 'lugar_origen')}
+                      {renderEditableTextField('Subalternidad', 'social_status')}
+                      {renderEditableTextField('Profesión', 'profession')}
+                      {renderEditableTextField('Relación Oferente', 'offerer_relation')}
+                      {renderEditableSelectField('Personajes representados', 'characters', characters.map(character => ({ value: character.name, label: character.name })))}
+                    </dl>
+                  </section>
+                  <section>
+                    <h2 className="border-b border-slate-300 pb-2 text-xl font-semibold text-slate-700">Descripción del Exvoto</h2>
+                    <dl className="mt-5 grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-2">
+                      {renderEditableTextField('Soporte Material', 'material')}
+                      {renderEditableTextField('Dimensiones', 'dimensions')}
+                      {renderEditableTextField('Estado de Conservación', 'conservation_status')}
+                    </dl>
+                  </section>
+                  <section>
+                    <h2 className="border-b border-slate-300 pb-2 text-xl font-semibold text-slate-700">Escritura</h2>
+                    <dl className="mt-5 space-y-5">
+                      {renderEditableTextField('Uso Capitales', 'text_case')}
+                      {renderEditableRichTextField('Competencia Gráfica', 'text_form')}
+                      {renderEditableRichTextField('Competencia Lingüística', 'linguistic_competence')}
+                      {renderEditableRichTextField('Tipo de Escritura', 'writing_type')}
+                    </dl>
+                  </section>
+                  <section>
+                    <h2 className="border-b border-slate-300 pb-2 text-xl font-semibold text-slate-700">Información Adicional</h2>
+                    <dl>
+                      {renderEditableRichTextField(null, 'extra_info', 5)}
+                    </dl>
+                  </section>
+                  <section>
+                    <h2 className="border-b border-slate-300 pb-2 text-xl font-semibold text-slate-700">Referencias</h2>
+                    <dl>
+                      {renderEditableRichTextField(null, 'references', 5)}
+                    </dl>
+                  </section>
+                </div>
+
+                <div className="hidden mt-8">
                   {/* Zona detalles */}
-                  <div className="lg:col-span-2 space-y-8">
+                  <div className="space-y-8">
                     {(() => {
                       const d = isEditing && editData ? editData : exvoto;
 
@@ -437,9 +687,12 @@ const ExvotoDetailPage: React.FC = () => {
                     })()}
                   </div>
 
-                  {/* Zona imagen */}
-                  <aside>
-                    <h2 className="text-xl font-semibold text-slate-700 border-b pb-2 mb-4">Imagen</h2>
+                  </div>
+                </div>
+            </section>
+
+            {/* Panel de imagen independiente de la hoja de datos. */}
+            <aside className="self-start overflow-x-hidden rounded-lg border border-slate-200 bg-white lg:sticky lg:top-[5.5rem] lg:h-[calc(100vh-7rem)] lg:overflow-y-auto lg:overscroll-contain">
                     {(() => {
                       // Construir lista unificada de todas las imágenes
                       const allImgs: ActiveImage[] = [
@@ -469,12 +722,9 @@ const ExvotoDetailPage: React.FC = () => {
                           <div className="border rounded-lg overflow-hidden bg-gray-50">
                             {/* Imagen principal con zoom por rueda */}
                             <div
+                              ref={imageViewportRef}
                               className="overflow-hidden bg-white flex items-center justify-center"
-                              style={{ height: '320px' }}
-                              onWheel={e => {
-                                e.preventDefault();
-                                setZoomLevel(z => Math.min(4, Math.max(0.5, z + (e.deltaY < 0 ? 0.1 : -0.1))));
-                              }}
+                              style={{ height: 'min(62vh, 680px)', minHeight: '420px' }}
                               onDoubleClick={() => setZoomLevel(1)}
                               title="Rueda para zoom · Doble click para restablecer"
                             >
@@ -531,7 +781,7 @@ const ExvotoDetailPage: React.FC = () => {
                           )}
 
                           {/* Botones de acción */}
-                          <div className="mt-3 flex flex-wrap gap-2">
+                          <div className="mt-3 flex flex-wrap justify-center gap-2">
                             <button
                               type="button"
                               onClick={() => activeSrc && openImageInNewTab(getImageSrc(activeSrc))}
@@ -589,9 +839,27 @@ const ExvotoDetailPage: React.FC = () => {
                         </>
                       );
                     })()}
-                  </aside>
-                </div>
-            </div>
+
+                    <section className="mx-4 mb-5 mt-6 border-t border-slate-200 pt-5">
+                      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Transcripción</h2>
+                      {isEditing && editData ? (
+                        <div className="mt-3">
+                          <RichTextEditor
+                            value={editData.transcription ?? ''}
+                            onChange={value => setExvotoField('transcription', value || null)}
+                            rows={8}
+                          />
+                        </div>
+                      ) : exvoto.transcription ? (
+                        <div
+                          className="prose prose-sm mt-3 max-w-none break-words text-slate-800"
+                          dangerouslySetInnerHTML={{ __html: exvoto.transcription }}
+                        />
+                      ) : (
+                        <p className="mt-3 text-sm text-slate-400">—</p>
+                      )}
+                    </section>
+            </aside>
         </div>
     );
 };
