@@ -276,7 +276,7 @@ const ExvotoDetailPage: React.FC = () => {
                     {(() => {
                       const d = isEditing && editData ? editData : exvoto;
 
-                      const EField = ({ label, fieldKey, type = 'text' }: { label: string; fieldKey: keyof Exvoto; type?: string }) => (
+                      const renderField = (label: string, fieldKey: keyof Exvoto, type = 'text') => (
                         <div>
                           <dt className="text-sm font-medium text-slate-500">{label}</dt>
                           {isEditing && editData ? (
@@ -292,7 +292,7 @@ const ExvotoDetailPage: React.FC = () => {
                         </div>
                       );
 
-                      const ESelect = ({ label, fieldKey, options }: { label: string; fieldKey: keyof Exvoto; options: { value: string | number; label: string }[] }) => (
+                      const renderSelect = (label: string, fieldKey: keyof Exvoto, options: { value: string | number; label: string }[]) => (
                         <div>
                           <dt className="text-sm font-medium text-slate-500">{label}</dt>
                           {isEditing && editData ? (
@@ -310,7 +310,7 @@ const ExvotoDetailPage: React.FC = () => {
                         </div>
                       );
 
-                      const ERich = ({ label, fieldKey }: { label: string; fieldKey: keyof Exvoto }) => (
+                      const renderRichText = (label: string, fieldKey: keyof Exvoto) => (
                         <div>
                           <dt className="text-sm font-medium text-slate-500">{label}</dt>
                           {isEditing && editData ? (
@@ -335,11 +335,11 @@ const ExvotoDetailPage: React.FC = () => {
                           <div className="space-y-6">
                             <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Detalles del Milagro</h2>
                             <dl className="space-y-4">
-                              <EField label="Fecha" fieldKey="exvoto_date" />
-                              <EField label="Época (25 años)" fieldKey="epoch" />
-                              <ESelect label="Milagro" fieldKey="miracle" options={miracles.map(m => ({ value: m.name, label: m.name }))} />
-                              <EField label="Lugar del Milagro" fieldKey="miracle_place" />
-                              <EField label="Provincia" fieldKey="province" />
+                              {renderField('Fecha', 'exvoto_date')}
+                              {renderField('Época (25 años)', 'epoch')}
+                              {renderSelect('Milagro', 'miracle', miracles.map(m => ({ value: m.name, label: m.name })))}
+                              {renderField('Lugar del Milagro', 'miracle_place')}
+                              {renderField('Provincia', 'province')}
                             </dl>
                           </div>
 
@@ -361,7 +361,7 @@ const ExvotoDetailPage: React.FC = () => {
                               ) : (
                                 <DetailField label="Lugar de Ofrenda (SEM)" value={d.offering_sem_id ? semNameMap[d.offering_sem_id] : null} />
                               )}
-                              <EField label="Lugar Origen Devoto/a" fieldKey="lugar_origen" />
+                              {renderField('Lugar Origen Devoto/a', 'lugar_origen')}
                               {isEditing && editData ? (
                                 <div>
                                   <dt className="text-sm font-medium text-slate-500">Lugar de Conservación (SEM)</dt>
@@ -383,40 +383,40 @@ const ExvotoDetailPage: React.FC = () => {
                           <div className="space-y-6">
                             <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Personas Involucradas</h2>
                             <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                              <EField label="Beneficiado" fieldKey="benefited_name" />
-                              <EField label="Oferente" fieldKey="offerer_name" />
-                              <ESelect label="Género del Oferente" fieldKey="offerer_gender" options={[
+                              {renderField('Beneficiado', 'benefited_name')}
+                              {renderField('Oferente', 'offerer_name')}
+                              {renderSelect('Género del Oferente', 'offerer_gender', [
                                 { value: 'Masculino', label: 'Masculino' }, { value: 'Femenino', label: 'Femenino' },
                                 { value: 'Ambos', label: 'Ambos' }, { value: 'Desconocido', label: 'Desconocido' },
-                              ]} />
-                              <EField label="Relación Oferente-Beneficiado" fieldKey="offerer_relation" />
-                              <EField label="Profesión" fieldKey="profession" />
-                              <EField label="Subalternidad" fieldKey="social_status" />
+                              ])}
+                              {renderField('Relación Oferente-Beneficiado', 'offerer_relation')}
+                              {renderField('Profesión', 'profession')}
+                              {renderField('Subalternidad', 'social_status')}
                             </dl>
                           </div>
 
                           <div className="space-y-6">
                             <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Descripción del Exvoto</h2>
                             <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                              <ESelect label="Personajes representados" fieldKey="characters" options={characters.map(c => ({ value: c.name, label: c.name }))} />
-                              <ESelect label="Divinidad" fieldKey="virgin_or_saint" options={divinities.map(dv => ({ value: dv.name, label: dv.name }))} />
-                              <EField label="Soporte Material" fieldKey="material" />
-                              <EField label="Dimensiones" fieldKey="dimensions" />
-                              <EField label="Estado de Conservación" fieldKey="conservation_status" />
-                              <EField label="ID Interno" fieldKey="internal_id" />
+                              {renderSelect('Personajes representados', 'characters', characters.map(c => ({ value: c.name, label: c.name })))}
+                              {renderSelect('Divinidad', 'virgin_or_saint', divinities.map(dv => ({ value: dv.name, label: dv.name })))}
+                              {renderField('Soporte Material', 'material')}
+                              {renderField('Dimensiones', 'dimensions')}
+                              {renderField('Estado de Conservación', 'conservation_status')}
+                              {renderField('ID Interno', 'internal_id')}
                             </dl>
                           </div>
 
                           <div className="space-y-6">
                             <h2 className="text-xl font-semibold text-slate-700 border-b pb-2">Textos y Notas</h2>
                             <dl className="space-y-4">
-                              <ERich label="Transcripción" fieldKey="transcription" />
-                              <ERich label="Tipo de Escritura" fieldKey="writing_type" />
-                              <ERich label="Competencia Lingüística" fieldKey="linguistic_competence" />
-                              <ERich label="Referencias" fieldKey="references" />
-                              <ERich label="Información Adicional" fieldKey="extra_info" />
-                              <EField label="Uso Capitales" fieldKey="text_case" />
-                              <ERich label="Competencia Gráfica (Forma de Texto)" fieldKey="text_form" />
+                              {renderRichText('Transcripción', 'transcription')}
+                              {renderRichText('Tipo de Escritura', 'writing_type')}
+                              {renderRichText('Competencia Lingüística', 'linguistic_competence')}
+                              {renderRichText('Referencias', 'references')}
+                              {renderRichText('Información Adicional', 'extra_info')}
+                              {renderField('Uso Capitales', 'text_case')}
+                              {renderRichText('Competencia Gráfica (Forma de Texto)', 'text_form')}
                             </dl>
                           </div>
                         </>

@@ -23,18 +23,26 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   rows = 4
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
+  const lastEmittedValueRef = useRef<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
 
-  // Inicializar contenido
+  // Sincroniza únicamente cambios externos. Reemplazar innerHTML mientras se escribe
+  // destruye la selección y mueve el cursor.
   useEffect(() => {
-    if (editorRef.current && editorRef.current.innerHTML !== value) {
-      editorRef.current.innerHTML = value || '';
-    }
-  }, [value]);
+    const editor = editorRef.current;
+    if (!editor || (value === lastEmittedValueRef.current && editor.innerHTML === value)) return;
+
+    if (document.activeElement === editor) return;
+
+    if (editor.innerHTML !== value) editor.innerHTML = value || '';
+    lastEmittedValueRef.current = value;
+  }, [value, isFocused]);
 
   const handleInput = () => {
     if (editorRef.current) {
-      onChange(editorRef.current.innerHTML);
+      const nextValue = editorRef.current.innerHTML;
+      lastEmittedValueRef.current = nextValue;
+      onChange(nextValue);
     }
   };
 
