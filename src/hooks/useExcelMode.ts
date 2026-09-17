@@ -48,6 +48,7 @@ export interface ExcelModeState<T> {
   // Layout
   scrollPosition: { x: number; y: number };
   containerWidth: number;
+  rowHeights: Record<string, number>;
   
   // UI State
   isExcelModeEnabled: boolean;
@@ -90,6 +91,7 @@ export interface ExcelModeActions<T> {
   // Layout
   setScrollPosition: (x: number, y: number) => void;
   setContainerWidth: (width: number) => void;
+  resizeRow: (rowId: string | number, height: number) => void;
 
   // Panel management
   toggleColumnPanel: () => void;
@@ -129,7 +131,8 @@ export function useExcelMode<T extends Record<string, any>>(
         columns: initializeColumns(),
         sortColumn: null,
         sortDirection: null,
-        filters: []
+        filters: [],
+        rowHeights: {}
       };
     }
 
@@ -156,7 +159,8 @@ export function useExcelMode<T extends Record<string, any>>(
         columns: [...savedColumns, ...newColumns],
         sortColumn: savedConfig.sortColumn,
         sortDirection: savedConfig.sortDirection,
-        filters: savedConfig.filters
+        filters: savedConfig.filters,
+        rowHeights: savedConfig.rowHeights ?? {}
       };
     }
 
@@ -164,7 +168,8 @@ export function useExcelMode<T extends Record<string, any>>(
       columns: initializeColumns(),
       sortColumn: null,
       sortDirection: null,
-      filters: []
+      filters: [],
+      rowHeights: {}
     };
   }, [pageConfig, initializeColumns, initialColumns]);
 
@@ -174,6 +179,7 @@ export function useExcelMode<T extends Record<string, any>>(
   const [sortColumn, setSortColumn] = useState<string | null>(initialState.sortColumn);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(initialState.sortDirection);
   const [filters, setFilters] = useState<ExcelFilter[]>(initialState.filters);
+  const [rowHeights, setRowHeights] = useState<Record<string, number>>(initialState.rowHeights);
   const [cellCustomizations, setCellCustomizations] = useState<ExcelCellCustomization[]>([]);
   const [selectedCell, setSelectedCell] = useState<{ rowIndex: number; columnKey: string } | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<string | number>>(new Set());
@@ -196,9 +202,10 @@ export function useExcelMode<T extends Record<string, any>>(
       columns,
       filters,
       sortColumn,
-      sortDirection
+      sortDirection,
+      rowHeights
     });
-  }, [columns, filters, sortColumn, sortDirection, pageConfig]);
+  }, [columns, filters, sortColumn, sortDirection, rowHeights, pageConfig]);
 
   // Memoized calculations
   const visibleColumns = useMemo(() => {
@@ -499,6 +506,13 @@ export function useExcelMode<T extends Record<string, any>>(
     setContainerWidth: useCallback((width: number) => {
       setContainerWidth(width);
     }, []),
+
+    resizeRow: useCallback((rowId: string | number, height: number) => {
+      setRowHeights(prev => ({
+        ...prev,
+        [String(rowId)]: Math.max(28, Math.min(500, Math.round(height)))
+      }));
+    }, []),
     
     // Panel management
     toggleColumnPanel: useCallback(() => {
@@ -515,6 +529,7 @@ export function useExcelMode<T extends Record<string, any>>(
       setSortColumn(null);
       setSortDirection(null);
       setFilters([]);
+      setRowHeights({});
     }, [pageConfig, initializeColumns]),
 
     hasStoredConfig: pageConfig?.hasStoredConfig() ?? false
@@ -532,6 +547,7 @@ export function useExcelMode<T extends Record<string, any>>(
     selectedRows,
     scrollPosition,
     containerWidth,
+    rowHeights,
     isExcelModeEnabled,
     showColumnPanel,
     showCellModal: expandedCell !== null,

@@ -105,6 +105,8 @@ const ExcelTableInner = <T extends Record<string, any>>({
   type RowDensity = 'compact' | 'normal' | 'spacious';
   const [rowDensity, setRowDensity] = useState<RowDensity>('normal');
   const rowHeightClass: Record<RowDensity, string> = { compact: 'h-7', normal: 'h-10', spacious: 'h-14' };
+  const rowHeightPx: Record<RowDensity, number> = { compact: 28, normal: 40, spacious: 56 };
+  const [rowResize, setRowResize] = useState<{ rowId: string | number; startY: number; startHeight: number } | null>(null);
 
   // Copy/Paste clipboard state
   const [copiedValue, setCopiedValue] = useState<{ value: any; columnKey: string; rowIndex: number } | null>(null);
@@ -179,6 +181,36 @@ const ExcelTableInner = <T extends Record<string, any>>({
       setEditingInlineCell(null);
     }
   }, [saveChanges]);
+
+  const handleRowResizeStart = useCallback((event: React.MouseEvent, rowId: string | number, height: number) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setRowResize({ rowId, startY: event.clientY, startHeight: height });
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
+
+  useEffect(() => {
+    if (!rowResize) return;
+
+    const handleMouseMove = (event: MouseEvent) => {
+      excelActions.resizeRow(rowResize.rowId, rowResize.startHeight + event.clientY - rowResize.startY);
+    };
+    const handleMouseUp = () => {
+      setRowResize(null);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [rowResize, excelActions]);
   
   // Select default cell A1 on mount or when data/columns ready
   useEffect(() => {
@@ -690,19 +722,33 @@ const ExcelTableInner = <T extends Record<string, any>>({
           {/* Contenido de filas */}
           <div style={{ minWidth: `${contentWidth + 50}px` }}>
             {excelState.filteredData.map((item, rowIndex) => (
-              <div
-                key={item[idField] || rowIndex}
-                className={cn(
-                  "flex border-b border-gray-200 hover:bg-gray-50 transition-colors",
-                  excelState.selectedRows.has(item[idField] || rowIndex) && "bg-blue-50"
-                )}
-              >
+              (() => {
+                const rowId = item[idField] ?? rowIndex;
+                const rowHeight = excelState.rowHeights[String(rowId)] ?? rowHeightPx[rowDensity];
+
+                return (
+                  <div
+                    key={rowId}
+                    className={cn(
+                      "flex border-b border-gray-200 hover:bg-gray-50 transition-colors",
+                      excelState.selectedRows.has(rowId) && "bg-blue-50"
+                    )}
+                  >
                 {/* Columna de números de fila */}
                 <div
-                  className="flex items-center justify-center text-xs font-medium text-gray-500 bg-gray-50 border-r border-gray-300 sticky left-0 z-10"
-                  style={{ width: '50px', minWidth: '50px', maxWidth: '50px' }}
+                  className="relative flex items-center justify-center text-xs font-medium text-gray-500 bg-gray-50 border-r border-gray-300 sticky left-0 z-10"
+                  style={{ width: '50px', minWidth: '50px', maxWidth: '50px', height: `${rowHeight}px` }}
                 >
                   {rowIndex + 1}
+                  <div
+                    className={cn(
+                      "absolute inset-x-0 bottom-0 h-1.5 cursor-row-resize transition-colors",
+                      "hover:bg-blue-500/50",
+                      rowResize?.rowId === rowId && "bg-blue-500"
+                    )}
+                    onMouseDown={(event) => handleRowResizeStart(event, rowId, rowHeight)}
+                    title="Arrastrar para ajustar la altura de esta fila"
+                  />
                 </div>
 
                 {excelState.visibleColumns.map((column) => {
@@ -739,6 +785,7 @@ const ExcelTableInner = <T extends Record<string, any>>({
                         width: `${column.width}px`,
                         minWidth: `${column.width}px`,
                         maxWidth: `${column.width}px`,
+                        height: `${rowHeight}px`,
                         ...getCellStyle(item[idField] || rowIndex, column.key)
                       }}
                       onClick={(e) => handleCellClick(rowIndex, column.key, e)}
@@ -786,7 +833,9 @@ const ExcelTableInner = <T extends Record<string, any>>({
                     </div>
                   );
                 })}
-              </div>
+                  </div>
+                );
+              })()
             ))}
 
             {/* Fila adicional para crear nuevo registro vacío */}

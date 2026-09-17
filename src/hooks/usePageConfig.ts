@@ -12,6 +12,7 @@ export interface PageConfig {
   filters: ExcelFilter[];
   sortColumn: string | null;
   sortDirection: 'asc' | 'desc' | null;
+  rowHeights?: Record<string, number>;
 }
 
 export interface PageConfigActions {
