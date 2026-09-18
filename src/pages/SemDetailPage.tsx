@@ -12,6 +12,7 @@ const SemDetailPage: React.FC = () => {
     const isTemporaryRecord = searchParams.get('new') === '1';
     const returnTo = searchParams.get('returnTo') || '/sems';
     const [sem, setSem] = useState<Sem | null>(null);
+    const [relatedExvotos, setRelatedExvotos] = useState<Exvoto[]>([]);
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [editData, setEditData] = useState<Sem | null>(null);
@@ -22,8 +23,17 @@ const SemDetailPage: React.FC = () => {
             if (!id) return;
             setLoading(true);
             try {
-                const foundSem = await api.getSemById(parseInt(id, 10));
+                const semId = parseInt(id, 10);
+                const [foundSem, exvotosInSem] = await Promise.all([
+                    api.getSemById(semId),
+                    api.getExvotosForSem(semId),
+                ]);
                 setSem(foundSem);
+                // Segunda barrera: evita mostrar exvotos ajenos aunque una API
+                // que aún no se haya reiniciado ignore temporalmente el filtro.
+                setRelatedExvotos(exvotosInSem.filter(exvoto =>
+                    exvoto.offering_sem_id === semId || exvoto.conservation_sem_id === semId
+                ));
             } catch (error) {
                 console.error('Error fetching SEM:', error);
             } finally {
@@ -175,6 +185,60 @@ const SemDetailPage: React.FC = () => {
         </div>
     );
 
+    const renderReferences = () => {
+        const manualReferences = data.references;
+        const relatedLinks = relatedExvotos.length > 0 && (
+            <div className={manualReferences ? 'mt-5 border-t border-slate-200 pt-4' : ''}>
+                <p className="mb-2 text-sm font-medium text-slate-600">Exvotos registrados en este SEM</p>
+                <ul className="list-disc space-y-1 pl-5">
+                    {relatedExvotos.map(relatedExvoto => {
+                        const roles = [
+                            relatedExvoto.offering_sem_id === sem.id ? 'ofrenda' : null,
+                            relatedExvoto.conservation_sem_id === sem.id ? 'conservación' : null,
+                        ].filter(Boolean).join(' y ');
+                        return (
+                            <li key={relatedExvoto.id}>
+                                <a
+                                    href={`/exvoto/${relatedExvoto.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 underline decoration-blue-300 underline-offset-2 hover:text-blue-800"
+                                    title="Abrir detalle del exvoto"
+                                >
+                                    {relatedExvoto.internal_id || `Exvoto #${relatedExvoto.id}`}
+                                </a>
+                                {roles && <span className="text-slate-500"> · {roles}</span>}
+                            </li>
+                        );
+                    })}
+                </ul>
+            </div>
+        );
+
+        return (
+            <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Referencias</label>
+                {isEditing && editData ? (
+                    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                        <RichTextEditor
+                            value={editData.references ?? ''}
+                            onChange={value => setField('references', value || null)}
+                            rows={4}
+                        />
+                        {relatedLinks}
+                    </div>
+                ) : (
+                    <div className="min-h-[100px] rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                        {manualReferences ? (
+                            <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: manualReferences }} />
+                        ) : !relatedLinks && '—'}
+                        {relatedLinks}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     const data = isEditing && editData ? editData : sem;
 
     return (
@@ -235,7 +299,7 @@ const SemDetailPage: React.FC = () => {
                 <div className="space-y-6">
                     {renderTextArea('Info exvotos', 'other_exvotos', data.other_exvotos)}
                     {renderTextArea('Comentarios', 'comments', data.comments)}
-                    {renderTextArea('Referencias', 'references', data.references)}
+                    {renderReferences()}
                 </div>
 
                 <div className="mt-8 p-4 bg-blue-50 rounded-lg">

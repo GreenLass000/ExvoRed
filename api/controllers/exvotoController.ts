@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { and, eq, desc, sql } from 'drizzle-orm';
+import { and, eq, desc, sql, or } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { exvoto, exvotoImage } from '../db/schema.js';
 import type { NewExvoto } from '../db/schema.js';
@@ -87,8 +87,13 @@ export const exvotoController = {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 100;
       const offset = (page - 1) * limit;
+      const semId = parseInt(req.query.sem_id as string, 10);
+      const semFilter = Number.isFinite(semId) && semId > 0
+        ? or(eq(exvoto.offering_sem_id, semId), eq(exvoto.conservation_sem_id, semId))
+        : undefined;
 
       const rows = await db.select().from(exvoto)
+        .where(semFilter)
         .orderBy(desc(exvoto.updated_at))
         .limit(limit)
         .offset(offset);
@@ -100,7 +105,7 @@ export const exvotoController = {
       }));
 
       // Obtener el total de registros
-      const totalResult = await db.select({ count: sql<number>`COUNT(*)` }).from(exvoto);
+      const totalResult = await db.select({ count: sql<number>`COUNT(*)` }).from(exvoto).where(semFilter);
       const total = totalResult[0]?.count || 0;
 
       res.json({

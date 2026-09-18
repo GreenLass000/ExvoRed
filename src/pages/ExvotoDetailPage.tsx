@@ -59,11 +59,13 @@ const ExvotoDetailPage: React.FC = () => {
     const [activeImage, setActiveImage] = useState<ActiveImage | null>(null);
     const [zoomLevel, setZoomLevel] = useState(1);
     const imageViewportRef = useRef<HTMLDivElement>(null);
+    const imageUploadInputRef = useRef<HTMLInputElement>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editData, setEditData] = useState<Exvoto | null>(null);
     const [saving, setSaving] = useState(false);
+    const [uploadingImages, setUploadingImages] = useState(false);
 
     useEffect(() => {
         const fetchDetails = async () => {
@@ -166,6 +168,52 @@ const ExvotoDetailPage: React.FC = () => {
 
     const setExvotoField = (key: keyof Exvoto, value: string | number | null) => {
         setEditData(prev => prev ? { ...prev, [key]: value } : prev);
+    };
+
+    const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (!exvoto) return;
+        const files = Array.from(event.target.files ?? []);
+        event.target.value = '';
+        if (files.length === 0) return;
+
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        if (files.some(file => !allowedTypes.includes(file.type.toLowerCase()))) {
+            alert('Solo se permiten imágenes JPG, JPEG o PNG.');
+            return;
+        }
+
+        setUploadingImages(true);
+        try {
+            const imageData = await Promise.all(files.map(file => new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            })));
+
+            let remainingImages = imageData;
+            if (!mainImage && imageData[0]) {
+                const updated = await api.updateExvoto(exvoto.id, { image: imageData[0] });
+                setExvoto(updated);
+                setMainImage(imageData[0]);
+                setActiveImage({ type: 'main', src: imageData[0] });
+                remainingImages = imageData.slice(1);
+            }
+
+            if (remainingImages.length > 0) {
+                const addedImages = await api.addExvotoImages(exvoto.id, remainingImages);
+                setExtraImages(previous => [...previous, ...addedImages]);
+                if (!mainImage && imageData.length === 0 && addedImages[0]) {
+                    setActiveImage({ type: 'extra', id: addedImages[0].id, src: addedImages[0].image });
+                }
+            }
+            setZoomLevel(1);
+        } catch (err) {
+            console.error('Error añadiendo imágenes:', err);
+            alert('No se pudieron añadir las imágenes seleccionadas.');
+        } finally {
+            setUploadingImages(false);
+        }
     };
 
     // Handle keyboard shortcuts
@@ -320,7 +368,7 @@ const ExvotoDetailPage: React.FC = () => {
     };
 
     return (
-        <div className="w-full max-w-[1680px] mx-auto grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] xl:gap-10">
+        <div className="w-full max-w-[1680px] mx-auto grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,63fr)_minmax(0,37fr)] xl:gap-10">
             <section className="min-h-[calc(100vh-10rem)] bg-white shadow-xl rounded-lg" aria-label="Ficha del exvoto">
               <div className="p-6 sm:p-8">
                 <div className="sticky top-16 z-20 -mx-6 -mt-6 mb-8 flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-6 py-6 sm:-mx-8 sm:-mt-8 sm:px-8">
@@ -781,7 +829,21 @@ const ExvotoDetailPage: React.FC = () => {
                           )}
 
                           {/* Botones de acción */}
+                          <input
+                            ref={imageUploadInputRef}
+                            type="file"
+                            accept="image/jpeg,image/jpg,image/png"
+                            multiple
+                            onChange={handleImageUpload}
+                            className="hidden"
+                          />
                           <div className="mt-3 flex flex-wrap justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => imageUploadInputRef.current?.click()}
+                              disabled={uploadingImages}
+                              className="rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+                            >{uploadingImages ? 'Añadiendo…' : 'Añadir imagen'}</button>
                             <button
                               type="button"
                               onClick={() => activeSrc && openImageInNewTab(getImageSrc(activeSrc))}
@@ -834,7 +896,7 @@ const ExvotoDetailPage: React.FC = () => {
                               }}
                               disabled={!activeImage || (activeImage.type === 'main' && !activeImage.src)}
                               className="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 text-sm"
-                            >Eliminar imagen</button>
+                            >Borrar imagen</button>
                           </div>
                         </>
                       );

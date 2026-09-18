@@ -107,6 +107,10 @@ export const getAllExvotos = (): Promise<Exvoto[]> => {
     return apiCall<PaginatedResponse<Exvoto>>('/exvotos?page=1&limit=100000').then(res => res.data);
 };
 
+export const getExvotosForSem = (semId: number): Promise<Exvoto[]> => {
+    return apiCall<PaginatedResponse<Exvoto>>(`/exvotos?sem_id=${semId}&page=1&limit=100000`).then(res => res.data);
+};
+
 export const getExvotoById = (id: number): Promise<Exvoto> => {
     return apiCall<Exvoto>(`/exvotos/${id}`);
 };
